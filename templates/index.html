@@ -1,0 +1,188 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>跨境电商标题工作流工具</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <style>
+    .spinner {
+      border: 3px solid #e5e7eb;
+      border-top: 3px solid #2563eb;
+      border-radius: 50%;
+      width: 18px; height: 18px;
+      animation: spin 1s linear infinite;
+      display: inline-block;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+    textarea { resize: vertical; }
+  </style>
+</head>
+<body class="bg-gray-50 text-gray-800">
+
+  <!-- 顶部栏 -->
+  <header class="bg-white shadow-sm sticky top-0 z-10">
+    <div class="max-w-5xl mx-auto px-4 py-3 flex items-center justify-between">
+      <h1 class="text-lg font-bold">🛒 跨境电商标题工作流</h1>
+      <div class="flex items-center gap-3 text-sm">
+        <span id="keyStatus" class="px-2 py-1 rounded bg-gray-100 text-gray-500">Key: 未配置</span>
+        <span class="text-gray-400">v<span id="appVersion"></span></span>
+        <button onclick="checkUpdate()" class="px-3 py-1 bg-gray-800 text-white rounded hover:bg-gray-700">检查更新</button>
+      </div>
+    </div>
+  </header>
+
+  <main class="max-w-5xl mx-auto px-4 py-6 grid gap-6 md:grid-cols-2">
+
+    <!-- 设置模块 -->
+    <section class="md:col-span-2 bg-white rounded-xl shadow p-5">
+      <h2 class="font-semibold mb-3">⚙️ DeepSeek API 设置</h2>
+      <div class="flex flex-col sm:flex-row gap-3">
+        <input id="apiKey" type="password" placeholder="粘贴你的 DeepSeek API Key（sk-...）"
+               class="flex-1 border rounded px-3 py-2" />
+        <button onclick="saveKey()" class="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-500">保存 Key</button>
+      </div>
+      <p class="text-xs text-gray-400 mt-2">Key 仅保存在本机 .env 文件，不会上传到任何服务器。</p>
+    </section>
+
+    <!-- 标题生成模块 -->
+    <section class="bg-white rounded-xl shadow p-5">
+      <h2 class="font-semibold mb-3">📝 标题生成 / 优化</h2>
+      <div class="grid grid-cols-2 gap-3 mb-3">
+        <select id="platform" class="border rounded px-2 py-2">
+          <option value="amazon">Amazon</option>
+          <option value="temu">Temu</option>
+        </select>
+        <select id="language" class="border rounded px-2 py-2">
+          <option value="cn">中文标题</option>
+          <option value="en">英文标题</option>
+        </select>
+      </div>
+      <div class="space-y-2">
+        <input id="f_product" placeholder="商品名称" class="w-full border rounded px-3 py-2" />
+        <input id="f_category" placeholder="品类" class="w-full border rounded px-3 py-2" />
+        <input id="f_keywords" placeholder="核心关键词（逗号分隔）" class="w-full border rounded px-3 py-2" />
+        <input id="f_audience" placeholder="目标人群" class="w-full border rounded px-3 py-2" />
+        <input id="f_features" placeholder="核心卖点/功能" class="w-full border rounded px-3 py-2" />
+        <textarea id="f_existing" rows="2" placeholder="已有标题（填写则进行优化，留空则生成新标题）" class="w-full border rounded px-3 py-2"></textarea>
+      </div>
+      <button onclick="genTitle()" class="mt-3 w-full bg-blue-600 text-white py-2 rounded hover:bg-blue-500">生成标题</button>
+      <div id="titleLoading" class="hidden mt-3 text-sm text-gray-500"><span class="spinner"></span> 生成中...</div>
+      <textarea id="titleResult" rows="6" readonly placeholder="结果会显示在这里"
+                class="mt-3 w-full border rounded px-3 py-2 bg-gray-50"></textarea>
+    </section>
+
+    <!-- 图片分析模块 -->
+    <section class="bg-white rounded-xl shadow p-5">
+      <h2 class="font-semibold mb-3">🖼️ 图片识别 · 热搜词 / 痛点 / 卖点</h2>
+      <input id="imageFile" type="file" accept="image/*" class="w-full text-sm mb-3" />
+      <button onclick="analyzeImage()" class="w-full bg-green-600 text-white py-2 rounded hover:bg-green-500">识别分析</button>
+      <div id="imgLoading" class="hidden mt-3 text-sm text-gray-500"><span class="spinner"></span> 分析中...</div>
+
+      <div id="imgResult" class="mt-4 hidden space-y-3 text-sm">
+        <div class="p-3 bg-gray-50 rounded">
+          <div class="font-medium mb-1">商品识别</div>
+          <div id="r_product" class="text-gray-600"></div>
+        </div>
+        <div class="p-3 bg-gray-50 rounded">
+          <div class="font-medium mb-1">🔥 热搜词</div>
+          <div id="r_hotwords" class="text-blue-600"></div>
+        </div>
+        <div class="p-3 bg-gray-50 rounded">
+          <div class="font-medium mb-1">😣 用户痛点</div>
+          <ul id="r_pain" class="list-disc list-inside text-gray-600"></ul>
+        </div>
+        <div class="p-3 bg-gray-50 rounded">
+          <div class="font-medium mb-1">✨ 核心卖点</div>
+          <ul id="r_sell" class="list-disc list-inside text-gray-600"></ul>
+        </div>
+      </div>
+      <textarea id="imgRaw" rows="6" readonly placeholder="AI 原始输出会显示在这里"
+                class="mt-3 w-full border rounded px-3 py-2 bg-gray-50 text-xs"></textarea>
+    </section>
+
+  </main>
+
+  <footer class="text-center text-xs text-gray-400 py-6">
+    <span id="footVersion"></span> · 本工具运行在你的本机，数据不出本地
+  </footer>
+
+  <script>
+    const $ = (id) => document.getElementById(id);
+
+    async function loadStatus() {
+      const r = await fetch('/api/status').then(r => r.json());
+      $('appVersion').textContent = r.version;
+      $('footVersion').textContent = 'v' + r.version;
+      if (r.has_key) {
+        $('keyStatus').textContent = 'Key: 已配置';
+        $('keyStatus').classList.replace('text-gray-500', 'text-green-600');
+      }
+    }
+
+    async function saveKey() {
+      const key = $('apiKey').value.trim();
+      if (!key) { alert('请输入 Key'); return; }
+      const r = await fetch('/api/save-key', {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({api_key: key})
+      }).then(r => r.json());
+      alert(r.msg);
+      loadStatus();
+    }
+
+    async function genTitle() {
+      $('titleLoading').classList.remove('hidden');
+      $('titleResult').value = '';
+      const fields = {
+        product: $('f_product').value,
+        category: $('f_category').value,
+        keywords: $('f_keywords').value,
+        audience: $('f_audience').value,
+        features: $('f_features').value,
+        existing_title: $('f_existing').value,
+      };
+      const r = await fetch('/api/generate-title', {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({
+          platform: $('platform').value,
+          language: $('language').value,
+          fields
+        })
+      }).then(r => r.json());
+      $('titleLoading').classList.add('hidden');
+      if (!r.ok) { alert(r.msg); return; }
+      $('titleResult').value = r.result;
+    }
+
+    async function analyzeImage() {
+      const file = $('imageFile').files[0];
+      if (!file) { alert('请先选择图片'); return; }
+      $('imgLoading').classList.remove('hidden');
+      $('imgResult').classList.add('hidden');
+      const fd = new FormData();
+      fd.append('image', file);
+      const r = await fetch('/api/analyze-image', { method: 'POST', body: fd })
+        .then(r => r.json());
+      $('imgLoading').classList.add('hidden');
+      if (!r.ok) { alert(r.msg); return; }
+      $('imgRaw').value = r.result;
+      const p = r.parsed;
+      $('r_product').textContent = p.product || '-';
+      $('r_hotwords').textContent = p.hotwords || '-';
+      $('r_pain').innerHTML = (p.painpoints || []).map(x => `<li>${x}</li>`).join('');
+      $('r_sell').innerHTML = (p.sellingpoints || []).map(x => `<li>${x}</li>`).join('');
+      $('imgResult').classList.remove('hidden');
+    }
+
+    async function checkUpdate() {
+      const r = await fetch('/api/check-update').then(r => r.json());
+      alert(r.msg + `（当前 v${r.current_version}）`);
+    }
+
+    loadStatus();
+  </script>
+</body>
+</html>

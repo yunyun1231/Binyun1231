@@ -1,0 +1,21 @@
+# ===== 环境变量（含 DeepSeek API Key，绝对不能提交！） =====
+.env
+
+# ===== 用户上传的图片 =====
+uploads/*
+!uploads/.gitkeep
+
+# ===== Python 缓存 =====
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+
+# ===== 日志 =====
+server.log
+
+# ===== 系统文件 =====
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/
