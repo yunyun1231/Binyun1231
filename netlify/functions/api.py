@@ -41,7 +41,7 @@ def handler(event, context):
             )
 
         if endpoint == "generate-title" and method == "POST":
-            api_key = body.get("api_key")
+            api_key = (body.get("api_key") or "").strip() or os.getenv("DEEPSEEK_API_KEY", "").strip()
             fields = body.get("fields", {})
             platform = body.get("platform", "amazon")
             language = body.get("language", "cn")
@@ -53,7 +53,7 @@ def handler(event, context):
             return _ok({"result": result})
 
         if endpoint == "analyze-image" and method == "POST":
-            api_key = body.get("api_key")
+            api_key = (body.get("api_key") or "").strip() or os.getenv("DEEPSEEK_API_KEY", "").strip()
             b64 = body.get("image_base64", "")
             mime = body.get("mime", "image/jpeg")
             if not b64:
