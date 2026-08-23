@@ -5,11 +5,13 @@
   functions = "netlify/functions"
 
 [functions]
+  # Python 函数运行时版本
+  runtime = "python3.8"
   # 把根目录的 core.py 一并打包进函数运行环境
   included_files = ["core.py"]
 
-# 可选：把 /api/* 也重定向到函数，方便未来统一路径（当前前端已直接调用函数路径）
-# [[redirects]]
-#   from = "/api/*"
-#   to = "/.netlify/functions/api/:splat"
-#   status = 200
+# 把 /api/* 重定向到函数，让前端统一用 /api/xxx 路径
+[[redirects]]
+  from = "/api/*"
+  to = "/.netlify/functions/api/:splat"
+  status = 200
