@@ -20,7 +20,6 @@
 </head>
 <body class="bg-gray-50 text-gray-800">
 
-  <!-- 顶部栏 -->
   <header class="bg-white shadow-sm sticky top-0 z-10">
     <div class="max-w-5xl mx-auto px-4 py-3 flex items-center justify-between">
       <h1 class="text-lg font-bold">🛒 跨境电商标题工作流</h1>
@@ -42,7 +41,7 @@
                class="flex-1 border rounded px-3 py-2" />
         <button onclick="saveKey()" class="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-500">保存 Key</button>
       </div>
-      <p class="text-xs text-gray-400 mt-2">Key 仅保存在本机 .env 文件，不会上传到任何服务器。</p>
+      <p id="keyHint" class="text-xs text-gray-400 mt-2">Key 保存在你浏览器本地（localStorage），不会上传服务器；也可在部署平台的环境变量里配置。</p>
     </section>
 
     <!-- 标题生成模块 -->
@@ -64,7 +63,7 @@
         <input id="f_keywords" placeholder="核心关键词（逗号分隔）" class="w-full border rounded px-3 py-2" />
         <input id="f_audience" placeholder="目标人群" class="w-full border rounded px-3 py-2" />
         <input id="f_features" placeholder="核心卖点/功能" class="w-full border rounded px-3 py-2" />
-        <textarea id="f_existing" rows="2" placeholder="已有标题（填写则进行优化，留空则生成新标题）" class="w-full border rounded px-3 py-2"></textarea>
+        <textarea id="f_existing" rows="2" placeholder="已有标题（填写则优化，留空则生成新标题）" class="w-full border rounded px-3 py-2"></textarea>
       </div>
       <button onclick="genTitle()" class="mt-3 w-full bg-blue-600 text-white py-2 rounded hover:bg-blue-500">生成标题</button>
       <div id="titleLoading" class="hidden mt-3 text-sm text-gray-500"><span class="spinner"></span> 生成中...</div>
@@ -104,35 +103,61 @@
   </main>
 
   <footer class="text-center text-xs text-gray-400 py-6">
-    <span id="footVersion"></span> · 本工具运行在你的本机，数据不出本地
+    <span id="footVersion"></span> · 图片/文本由 DeepSeek 官方接口处理 · Key 仅存你的浏览器本地
   </footer>
 
   <script>
     const $ = (id) => document.getElementById(id);
+    const LS_KEY = "deepseek_api_key";
+
+    // 判断是否在 Netlify 部署环境
+    const isNetlify = location.hostname.includes("netlify.app") ||
+                      location.hostname.includes("netlify.com");
+    // 接口基址：本地走 /api，云端走 Netlify 函数
+    const API_BASE = isNetlify ? "/.netlify/functions/api" : "/api";
+
+    function getKey() {
+      return (localStorage.getItem(LS_KEY) || "").trim();
+    }
+    function setKey(k) {
+      localStorage.setItem(LS_KEY, k);
+    }
 
     async function loadStatus() {
-      const r = await fetch('/api/status').then(r => r.json());
+      const r = await fetch(API_BASE + '/status').then(r => r.json());
       $('appVersion').textContent = r.version;
       $('footVersion').textContent = 'v' + r.version;
-      if (r.has_key) {
+      const k = getKey();
+      if (k) {
         $('keyStatus').textContent = 'Key: 已配置';
         $('keyStatus').classList.replace('text-gray-500', 'text-green-600');
+        $('apiKey').value = k;
+      }
+      if (isNetlify) {
+        $('keyHint').textContent = '检测到云端部署：Key 请填在这里（浏览器本地保存），或在 Netlify 后台配置环境变量 DEEPSEEK_API_KEY。';
       }
     }
 
     async function saveKey() {
       const key = $('apiKey').value.trim();
       if (!key) { alert('请输入 Key'); return; }
-      const r = await fetch('/api/save-key', {
-        method: 'POST',
-        headers: {'Content-Type': 'application/json'},
-        body: JSON.stringify({api_key: key})
-      }).then(r => r.json());
-      alert(r.msg);
+      setKey(key);
+      // 本地 Flask 环境额外写入 .env（云端忽略）
+      if (!isNetlify) {
+        await fetch(API_BASE + '/save-key', {
+          method: 'POST',
+          headers: {'Content-Type': 'application/json'},
+          body: JSON.stringify({api_key: key})
+        }).then(r => r.json()).then(r => alert(r.msg));
+      } else {
+        alert('Key 已保存到本浏览器，可直接使用');
+      }
       loadStatus();
     }
 
     async function genTitle() {
+      const key = getKey();
+      if (!key) { alert('请先在上方填写 DeepSeek API Key'); return; }
       $('titleLoading').classList.remove('hidden');
       $('titleResult').value = '';
       const fields = {
@@ -143,10 +168,11 @@
         features: $('f_features').value,
         existing_title: $('f_existing').value,
       };
-      const r = await fetch('/api/generate-title', {
+      const r = await fetch(API_BASE + '/generate-title', {
         method: 'POST',
         headers: {'Content-Type': 'application/json'},
         body: JSON.stringify({
+          api_key: key,
           platform: $('platform').value,
           language: $('language').value,
           fields
@@ -158,14 +184,23 @@
     }
 
     async function analyzeImage() {
+      const key = getKey();
+      if (!key) { alert('请先在上方填写 DeepSeek API Key'); return; }
       const file = $('imageFile').files[0];
       if (!file) { alert('请先选择图片'); return; }
       $('imgLoading').classList.remove('hidden');
       $('imgResult').classList.add('hidden');
-      const fd = new FormData();
-      fd.append('image', file);
-      const r = await fetch('/api/analyze-image', { method: 'POST', body: fd })
-        .then(r => r.json());
+
+      // 前端压缩 + 转 base64
+      const dataUrl = await compressImage(file, 1280);
+      const b64 = dataUrl.split(',')[1];
+      const mime = dataUrl.split(':')[1].split(';')[0];
+
+      const r = await fetch(API_BASE + '/analyze-image', {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({ api_key: key, image_base64: b64, mime })
+      }).then(r => r.json());
       $('imgLoading').classList.add('hidden');
       if (!r.ok) { alert(r.msg); return; }
       $('imgRaw').value = r.result;
@@ -177,8 +212,33 @@
       $('imgResult').classList.remove('hidden');
     }
 
+    function compressImage(file, maxDim) {
+      return new Promise((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onload = () => {
+          const img = new Image();
+          img.onload = () => {
+            let { width, height } = img;
+            if (width > height && width > maxDim) {
+              height = Math.round(height * maxDim / width); width = maxDim;
+            } else if (height > maxDim) {
+              width = Math.round(width * maxDim / height); height = maxDim;
+            }
+            const canvas = document.createElement('canvas');
+            canvas.width = width; canvas.height = height;
+            canvas.getContext('2d').drawImage(img, 0, 0, width, height);
+            resolve(canvas.toDataURL('image/jpeg', 0.85));
+          };
+          img.onerror = reject;
+          img.src = reader.result;
+        };
+        reader.onerror = reject;
+        reader.readAsDataURL(file);
+      });
+    }
+
     async function checkUpdate() {
-      const r = await fetch('/api/check-update').then(r => r.json());
+      const r = await fetch(API_BASE + '/check-update').then(r => r.json());
       alert(r.msg + `（当前 v${r.current_version}）`);
     }
 

@@ -1,0 +1,15 @@
+[build]
+  # 前端静态文件发布目录
+  publish = "public"
+  # Netlify Functions 目录
+  functions = "netlify/functions"
+
+[functions]
+  # 把根目录的 core.py 一并打包进函数运行环境
+  included_files = ["core.py"]
+
+# 可选：把 /api/* 也重定向到函数，方便未来统一路径（当前前端已直接调用函数路径）
+# [[redirects]]
+#   from = "/api/*"
+#   to = "/.netlify/functions/api/:splat"
+#   status = 200
