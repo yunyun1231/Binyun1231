@@ -5,10 +5,8 @@
   functions = "netlify/functions"
 
 [functions]
-  # Python 函数运行时版本
-  runtime = "python3.8"
-  # 把根目录的 core.py 一并打包进函数运行环境
-  included_files = ["core.py"]
+  # 免费套餐最大超时 26 秒；DeepSeek 响应慢时留足时间
+  timeout = 26
 
 # 把 /api/* 重定向到函数，让前端统一用 /api/xxx 路径
 [[redirects]]
