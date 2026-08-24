@@ -160,7 +160,7 @@ function errResponse(msg) {
   };
 }
 
-export default async function handler(event, context) {
+export const handler = async function handler(event, context) {
   const method = event.httpMethod || "GET";
   const path = event.path || "/";
   const endpoint = path.replace(/\/$/, "").split("/").pop() || "";
