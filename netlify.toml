@@ -1,16 +1,6 @@
 [build]
-  # 前端静态文件发布目录（无需构建命令）
   publish = "public"
 
-[functions]
-  # 函数目录（Netlify 官方标准写法）
-  directory = "netlify/functions"
-  # 使用 esbuild 打包 Node 函数
-  node_bundler = "esbuild"
-  # 免费套餐函数超时上限 10 秒
-  timeout = 10
-
-# 把 /api/* 重定向到 api 函数，前端统一用 /api/xxx 路径
 [[redirects]]
   from = "/api/*"
   to = "/.netlify/functions/api/:splat"
