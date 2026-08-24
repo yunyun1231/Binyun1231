@@ -1,5 +1,7 @@
 [build]
   publish = "public"
+  # 明确 Node 版本，保证函数内全局 fetch 可用
+  environment = { NODE_VERSION = "18" }
 
 [[redirects]]
   from = "/api/*"
