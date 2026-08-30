@@ -145,6 +145,19 @@ function buildTitleMessages(platform, language, fields) {
     `注意平台合规：不要使用绝对化用语(best/最/顶级等)、医疗功效宣称(治愈/cure等)、` +
     `虚假促销用语、未经授权的品牌/侵权词，避免被${pf}下架或警告。`;
 
+  const longTailNote =
+    language === "cn"
+      ? `标题策略要求（铺货长尾词打法）：\n` +
+        `1. 避开 "storage bins" 等红海大词，不要堆砌宽泛词；\n` +
+        `2. 多用「场景 + 人群 + 用途」结构的具体长尾词，例如 "small drawer organizer for makeup"、"under bed storage for shoes"、"带盖透明衣柜收纳盒"；\n` +
+        `3. 从买家真实搜索角度出发，写清这个 SKU 解决什么具体生活问题；\n` +
+        `4. 每条标题聚焦一个细分使用场景，让新品也能通过长尾流量获得曝光。`
+      : `Title strategy (long-tail dropshipping approach):\n` +
+        `1. Avoid red-ocean broad terms like "storage bins" and do not keyword-stuff;\n` +
+        `2. Use specific long-tail phrases in the format "scene + audience + use", e.g. "small drawer organizer for makeup", "under bed storage for shoes";\n` +
+        `3. Write from the buyer's real search intent and clearly state what specific life problem this SKU solves;\n` +
+        `4. Focus each title on one narrow usage scenario so new listings can gain exposure through long-tail traffic.`;
+
   let sys;
   if (language === "cn") {
     if (existingTitle) {
@@ -160,7 +173,7 @@ function buildTitleMessages(platform, language, fields) {
     }
   }
 
-  sys += "\n\n" + complianceNote;
+  sys += "\n\n" + longTailNote + "\n\n" + complianceNote;
 
   const user = `商品名称: ${product}\n品类: ${category}\n核心关键词: ${keywords}\n目标人群: ${audience}\n核心卖点/功能: ${features}\n`;
   if (existingTitle) {
