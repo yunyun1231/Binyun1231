@@ -5,103 +5,159 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>跨境电商标题工作流工具</title>
   <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+SC:wght@400;500;700;900&display=swap" rel="stylesheet">
   <style>
+    body { font-family: 'Noto Sans SC', system-ui, -apple-system, 'PingFang SC', 'Microsoft YaHei', sans-serif; }
+    .brand-text {
+      background: linear-gradient(90deg, #31C27C, #1ED0A0 60%, #19C2D6);
+      -webkit-background-clip: text; background-clip: text; color: transparent;
+    }
+    .brand-bg { background: linear-gradient(135deg, #31C27C, #1ED0A0 55%, #19C2D6); }
+    .card { background: rgba(255,255,255,0.86); backdrop-filter: blur(8px); }
     .spinner {
-      border: 3px solid #e5e7eb;
-      border-top: 3px solid #2563eb;
-      border-radius: 50%;
-      width: 18px; height: 18px;
-      animation: spin 1s linear infinite;
-      display: inline-block;
+      border: 3px solid #d1fae5; border-top: 3px solid #31C27C;
+      border-radius: 50%; width: 18px; height: 18px;
+      animation: spin 1s linear infinite; display: inline-block;
     }
     @keyframes spin { to { transform: rotate(360deg); } }
-    textarea { resize: vertical; }
+    textarea, input, select { outline: none; }
+    .field {
+      width: 100%; border: 1px solid #e5e7eb; border-radius: 0.75rem;
+      padding: 0.625rem 0.75rem; font-size: 0.875rem; background: rgba(255,255,255,0.7);
+      transition: border-color .15s, box-shadow .15s;
+    }
+    .field:focus { border-color: #34d399; box-shadow: 0 0 0 3px rgba(52,211,153,.25); }
+    .btn-green {
+      background: linear-gradient(135deg, #31C27C, #1ED0A0);
+      transition: transform .15s ease, box-shadow .15s ease, filter .15s ease;
+    }
+    .btn-green:hover { transform: translateY(-1px); box-shadow: 0 10px 22px rgba(49,194,124,.35); filter: brightness(1.03); }
+    .btn-green:active { transform: translateY(0); }
+    .btn-ghost { border: 1px solid #31C27C; color: #31C27C; transition: all .15s; }
+    .btn-ghost:hover { background: rgba(49,194,124,.08); }
+    .icon-box { background: linear-gradient(135deg, #34d399, #2dd4bf); }
   </style>
 </head>
-<body class="bg-gray-50 text-gray-800">
+<body class="bg-gradient-to-br from-emerald-50 via-white to-teal-50 min-h-screen text-gray-800">
 
-  <header class="bg-white shadow-sm sticky top-0 z-10">
+  <!-- 顶栏 -->
+  <header class="sticky top-0 z-20 backdrop-blur bg-white/70 border-b border-emerald-100">
     <div class="max-w-5xl mx-auto px-4 py-3 flex items-center justify-between">
-      <h1 class="text-lg font-bold">🛒 跨境电商标题工作流</h1>
-      <div class="flex items-center gap-3 text-sm">
-        <span id="keyStatus" class="px-2 py-1 rounded bg-gray-100 text-gray-500">Key: 未配置</span>
+      <div class="flex items-center gap-2.5">
+        <div class="w-9 h-9 rounded-xl brand-bg flex items-center justify-center text-white text-lg shadow-md">🎵</div>
+        <div>
+          <h1 class="text-base font-black leading-tight brand-text">跨境标题工作室</h1>
+          <p class="text-[11px] text-gray-400 leading-tight">AI 生成 · 图片识别 · 合规检测</p>
+        </div>
+      </div>
+      <div class="flex items-center gap-2 text-xs">
+        <span id="keyStatus" class="px-2.5 py-1 rounded-full bg-gray-100 text-gray-500">Key: 未配置</span>
         <span class="text-gray-400">v<span id="appVersion"></span></span>
-        <button onclick="checkUpdate()" class="px-3 py-1 bg-gray-800 text-white rounded hover:bg-gray-700">检查更新</button>
+        <button onclick="checkUpdate()" class="btn-ghost px-3 py-1 rounded-full">检查更新</button>
       </div>
     </div>
   </header>
 
-  <main class="max-w-5xl mx-auto px-4 py-6 grid gap-6 md:grid-cols-2">
+  <main class="max-w-5xl mx-auto px-4 py-6 space-y-6">
 
-    <!-- 设置模块 -->
-    <section class="md:col-span-2 bg-white rounded-xl shadow p-5">
-      <h2 class="font-semibold mb-3">⚙️ DeepSeek API 设置</h2>
+    <!-- Hero 横幅 -->
+    <section class="brand-bg rounded-3xl p-6 md:p-8 text-white shadow-lg relative overflow-hidden">
+      <div class="absolute -right-10 -top-10 w-40 h-40 bg-white/10 rounded-full blur-2xl"></div>
+      <div class="absolute right-16 bottom-0 w-24 h-24 bg-white/10 rounded-full blur-2xl"></div>
+      <h2 class="text-2xl md:text-3xl font-black mb-2 relative">🛒 一键生成高转化跨境标题</h2>
+      <p class="text-white/85 text-sm max-w-xl relative">输入商品信息或上传图片，AI 自动产出 Amazon / Temu 热搜标题，并实时检测规避平台违规词。</p>
+      <div class="mt-4 flex flex-wrap gap-2 relative">
+        <span class="px-3 py-1 rounded-full text-xs bg-white/15">⚡ DeepSeek 驱动</span>
+        <span class="px-3 py-1 rounded-full text-xs bg-white/15">🛡️ 违规词防护</span>
+        <span class="px-3 py-1 rounded-full text-xs bg-white/15">🌐 中英双语</span>
+      </div>
+    </section>
+
+    <!-- API 设置 -->
+    <section class="card rounded-2xl shadow-sm border border-emerald-100 p-5">
+      <div class="flex items-center gap-2 mb-3">
+        <span class="w-7 h-7 rounded-lg bg-emerald-100 text-emerald-600 flex items-center justify-center text-sm">🔑</span>
+        <h2 class="font-bold">DeepSeek API 设置</h2>
+      </div>
       <div class="flex flex-col sm:flex-row gap-3">
-        <input id="apiKey" type="password" placeholder="粘贴你的 DeepSeek API Key（sk-...）"
-               class="flex-1 border rounded px-3 py-2" />
-        <button onclick="saveKey()" class="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-500">保存 Key</button>
+        <input id="apiKey" type="password" placeholder="粘贴你的 DeepSeek API Key（sk-...）" class="field flex-1" />
+        <button onclick="saveKey()" class="btn-green text-white px-5 py-2.5 rounded-xl font-medium whitespace-nowrap">保存 Key</button>
       </div>
       <p id="keyHint" class="text-xs text-gray-400 mt-2">Key 保存在你浏览器本地（localStorage），不会上传服务器；也可在部署平台的环境变量里配置。</p>
     </section>
 
-    <!-- 标题生成模块 -->
-    <section class="bg-white rounded-xl shadow p-5">
-      <h2 class="font-semibold mb-3">📝 标题生成 / 优化</h2>
-      <div class="grid grid-cols-2 gap-3 mb-3">
-        <select id="platform" class="border rounded px-2 py-2">
-          <option value="amazon">Amazon</option>
-          <option value="temu">Temu</option>
-        </select>
-        <select id="language" class="border rounded px-2 py-2">
-          <option value="cn">中文标题</option>
-          <option value="en">英文标题</option>
-        </select>
-      </div>
-      <div class="space-y-2">
-        <input id="f_product" placeholder="商品名称" class="w-full border rounded px-3 py-2" />
-        <input id="f_category" placeholder="品类" class="w-full border rounded px-3 py-2" />
-        <input id="f_keywords" placeholder="核心关键词（逗号分隔）" class="w-full border rounded px-3 py-2" />
-        <input id="f_audience" placeholder="目标人群" class="w-full border rounded px-3 py-2" />
-        <input id="f_features" placeholder="核心卖点/功能" class="w-full border rounded px-3 py-2" />
-        <textarea id="f_existing" rows="2" placeholder="已有标题（填写则优化，留空则生成新标题）" class="w-full border rounded px-3 py-2"></textarea>
-      </div>
-      <button onclick="genTitle()" class="mt-3 w-full bg-blue-600 text-white py-2 rounded hover:bg-blue-500">生成标题</button>
-      <div id="titleLoading" class="hidden mt-3 text-sm text-gray-500"><span class="spinner"></span> 生成中...</div>
-      <textarea id="titleResult" rows="6" readonly placeholder="结果会显示在这里"
-                class="mt-3 w-full border rounded px-3 py-2 bg-gray-50"></textarea>
-      <div id="titleCompliance" class="hidden mt-3 p-3 bg-amber-50 border border-amber-200 rounded"></div>
-    </section>
+    <!-- 两个功能卡片 -->
+    <div class="grid gap-6 md:grid-cols-2">
 
-    <!-- 图片分析模块 -->
-    <section class="bg-white rounded-xl shadow p-5">
-      <h2 class="font-semibold mb-3">🖼️ 图片识别 · 热搜词 / 痛点 / 卖点</h2>
-      <input id="imageFile" type="file" accept="image/*" class="w-full text-sm mb-3" />
-      <button onclick="analyzeImage()" class="w-full bg-green-600 text-white py-2 rounded hover:bg-green-500">识别分析</button>
-      <div id="imgLoading" class="hidden mt-3 text-sm text-gray-500"><span class="spinner"></span> 分析中...</div>
+      <!-- 标题生成 -->
+      <section class="card rounded-2xl shadow-sm border border-emerald-100 p-5 flex flex-col">
+        <div class="flex items-center gap-2 mb-4">
+          <span class="w-8 h-8 rounded-xl icon-box text-white flex items-center justify-center">📝</span>
+          <h2 class="font-bold">标题生成 / 优化</h2>
+        </div>
+        <div class="grid grid-cols-2 gap-3 mb-3">
+          <select id="platform" class="field">
+            <option value="amazon">Amazon</option>
+            <option value="temu">Temu</option>
+          </select>
+          <select id="language" class="field">
+            <option value="cn">中文标题</option>
+            <option value="en">英文标题</option>
+          </select>
+        </div>
+        <div class="space-y-2.5">
+          <input id="f_product" placeholder="商品名称" class="field" />
+          <input id="f_category" placeholder="品类" class="field" />
+          <input id="f_keywords" placeholder="核心关键词（逗号分隔）" class="field" />
+          <input id="f_audience" placeholder="目标人群" class="field" />
+          <input id="f_features" placeholder="核心卖点/功能" class="field" />
+          <textarea id="f_existing" rows="2" placeholder="已有标题（填写则优化，留空则生成新标题）" class="field"></textarea>
+        </div>
+        <button onclick="genTitle()" class="btn-green mt-4 w-full text-white py-3 rounded-xl font-semibold">✨ 生成标题</button>
+        <div id="titleLoading" class="hidden mt-3 text-sm text-emerald-600"><span class="spinner"></span> 生成中...</div>
+        <textarea id="titleResult" rows="6" readonly placeholder="结果会显示在这里" class="field mt-3 bg-gray-50/70"></textarea>
+        <div id="titleCompliance" class="hidden mt-3 p-3 bg-amber-50 border border-amber-200 rounded-xl text-sm"></div>
+      </section>
 
-      <div id="imgResult" class="mt-4 hidden space-y-3 text-sm">
-        <div class="p-3 bg-gray-50 rounded">
-          <div class="font-medium mb-1">商品识别</div>
-          <div id="r_product" class="text-gray-600"></div>
+      <!-- 图片分析 -->
+      <section class="card rounded-2xl shadow-sm border border-emerald-100 p-5 flex flex-col">
+        <div class="flex items-center gap-2 mb-4">
+          <span class="w-8 h-8 rounded-xl icon-box text-white flex items-center justify-center">🖼️</span>
+          <h2 class="font-bold">图片识别 · 热搜词 / 痛点 / 卖点</h2>
         </div>
-        <div class="p-3 bg-gray-50 rounded">
-          <div class="font-medium mb-1">🔥 热搜词</div>
-          <div id="r_hotwords" class="text-blue-600"></div>
-        </div>
-        <div class="p-3 bg-gray-50 rounded">
-          <div class="font-medium mb-1">😣 用户痛点</div>
-          <ul id="r_pain" class="list-disc list-inside text-gray-600"></ul>
-        </div>
-        <div class="p-3 bg-gray-50 rounded">
-          <div class="font-medium mb-1">✨ 核心卖点</div>
-          <ul id="r_sell" class="list-disc list-inside text-gray-600"></ul>
-        </div>
-      </div>
-      <textarea id="imgRaw" rows="6" readonly placeholder="AI 原始输出会显示在这里"
-                class="mt-3 w-full border rounded px-3 py-2 bg-gray-50 text-xs"></textarea>
-      <div id="imgCompliance" class="hidden mt-3 p-3 bg-amber-50 border border-amber-200 rounded"></div>
-    </section>
+        <label class="cursor-pointer">
+          <input id="imageFile" type="file" accept="image/*" class="hidden" />
+          <div class="w-full border-2 border-dashed border-emerald-200 rounded-xl py-5 text-center text-sm text-emerald-600 hover:bg-emerald-50/50 transition">
+            📤 点击选择商品图片
+          </div>
+        </label>
+        <button onclick="analyzeImage()" class="btn-green mt-3 w-full text-white py-3 rounded-xl font-semibold">🔍 识别分析</button>
+        <div id="imgLoading" class="hidden mt-3 text-sm text-emerald-600"><span class="spinner"></span> 分析中...</div>
 
+        <div id="imgResult" class="hidden mt-4 space-y-3 text-sm">
+          <div class="p-3 bg-emerald-50/60 rounded-xl">
+            <div class="font-medium mb-1 text-emerald-700">商品识别</div>
+            <div id="r_product" class="text-gray-600"></div>
+          </div>
+          <div class="p-3 bg-emerald-50/60 rounded-xl">
+            <div class="font-medium mb-1 text-emerald-700">🔥 热搜词</div>
+            <div id="r_hotwords" class="text-emerald-700 font-medium"></div>
+          </div>
+          <div class="p-3 bg-emerald-50/60 rounded-xl">
+            <div class="font-medium mb-1 text-emerald-700">😣 用户痛点</div>
+            <ul id="r_pain" class="list-disc list-inside text-gray-600"></ul>
+          </div>
+          <div class="p-3 bg-emerald-50/60 rounded-xl">
+            <div class="font-medium mb-1 text-emerald-700">✨ 核心卖点</div>
+            <ul id="r_sell" class="list-disc list-inside text-gray-600"></ul>
+          </div>
+        </div>
+        <textarea id="imgRaw" rows="6" readonly placeholder="AI 原始输出会显示在这里" class="field mt-3 bg-gray-50/70 text-xs"></textarea>
+        <div id="imgCompliance" class="hidden mt-3 p-3 bg-amber-50 border border-amber-200 rounded-xl text-sm"></div>
+      </section>
+
+    </div>
   </main>
 
   <footer class="text-center text-xs text-gray-400 py-6">
@@ -132,7 +188,8 @@
       const k = getKey();
       if (k) {
         $('keyStatus').textContent = 'Key: 已配置';
-        $('keyStatus').classList.replace('text-gray-500', 'text-green-600');
+        $('keyStatus').classList.replace('text-gray-500', 'text-emerald-600');
+        $('keyStatus').classList.replace('bg-gray-100', 'bg-emerald-100');
         $('apiKey').value = k;
       }
       if (isNetlify) {
@@ -253,7 +310,7 @@
       const avoided = r.avoided || [];
       const hits = r.static_hits || [];
       if (!avoided.length && !hits.length) {
-        el.innerHTML = `<div class="text-green-700 font-medium">✅ 未检测到违规词，内容合规</div>`;
+        el.innerHTML = `<div class="text-emerald-700 font-medium">✅ 未检测到违规词，内容合规</div>`;
         el.classList.remove('hidden');
         return;
       }
@@ -262,7 +319,7 @@
         html += `<div class="text-xs text-gray-500 mb-1">AI 已自动规避 / 改写以下违规表述：</div>`;
         html += `<ul class="space-y-1 mb-2">` + avoided.map(c =>
           `<li><span class="text-red-600 font-medium">${escapeHtml(c.word || '')}</span>` +
-          (c.replacement ? ` → <span class="text-green-700">${escapeHtml(c.replacement)}</span>` : ``) +
+          (c.replacement ? ` → <span class="text-emerald-700">${escapeHtml(c.replacement)}</span>` : ``) +
           ` <span class="text-gray-400 text-xs">(${escapeHtml(c.reason || '平台合规')})</span></li>`
         ).join('') + `</ul>`;
       }
