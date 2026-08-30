@@ -72,7 +72,7 @@ async function complianceReview(text, platformLabel, apiKey) {
     { role: "system", content: sys },
     { role: "user", content: text },
   ];
-  const raw = await callDeepSeek(messages, apiKey, TEXT_MODEL, 1200);
+  const raw = await callDeepSeek(messages, apiKey, TEXT_MODEL, 800, 15000);
   if (raw.startsWith("ERROR")) return { clean: text, changes: [], error: raw };
   // 解析 JSON（兼容 ```json 包裹）
   let jsonStr = raw.trim();
@@ -93,7 +93,7 @@ function getKey(provided) {
   return (provided || process.env.DEEPSEEK_API_KEY || "").trim();
 }
 
-async function callDeepSeek(messages, apiKey, model = TEXT_MODEL, maxTokens = 2000) {
+async function callDeepSeek(messages, apiKey, model = TEXT_MODEL, maxTokens = 2000, timeoutMs = 25000) {
   const key = getKey(apiKey);
   if (!key || key.startsWith("sk-your")) {
     return "ERROR: 请先配置有效的 DeepSeek API Key";
@@ -108,7 +108,7 @@ async function callDeepSeek(messages, apiKey, model = TEXT_MODEL, maxTokens = 20
 
   try {
     const controller = new AbortController();
-    const timeout = setTimeout(() => controller.abort(), 90000);
+    const timeout = setTimeout(() => controller.abort(), timeoutMs);
     const resp = await fetch(DEEPSEEK_API_URL, {
       method: "POST",
       headers: {
@@ -175,7 +175,7 @@ async function generateTitle(fields, platform, language, apiKey) {
     { role: "system", content: sysMsg },
     { role: "user", content: userMsg },
   ];
-  return callDeepSeek(messages, apiKey, TEXT_MODEL);
+  return callDeepSeek(messages, apiKey, TEXT_MODEL, 1200);
 }
 
 async function analyzeImage(imageBase64, mime, apiKey) {
