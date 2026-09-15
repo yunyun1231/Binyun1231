@@ -1,0 +1,31 @@
+{
+  "name": "cloud-title-app",
+  "version": "1.2.0",
+  "description": "云朵跨境标题生成器 - 离线桌面版",
+  "main": "main.js",
+  "scripts": {
+    "start": "electron .",
+    "dist": "electron-builder --win"
+  },
+  "devDependencies": {
+    "electron": "^31.0.0",
+    "electron-builder": "^24.13.3"
+  },
+  "build": {
+    "appId": "com.cloudtitle.app",
+    "productName": "云朵跨境标题生成器",
+    "files": [
+      "main.js"
+    ],
+    "extraResources": [
+      "../cloud-title-app.html"
+    ],
+    "win": {
+      "target": "portable",
+      "artifactName": "云朵跨境标题生成器-${version}.${ext}"
+    },
+    "directories": {
+      "output": "dist"
+    }
+  }
+}

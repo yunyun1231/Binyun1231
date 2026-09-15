@@ -3,274 +3,269 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>跨境电商标题工作流工具</title>
-  <script src="https://cdn.tailwindcss.com"></script>
-  <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+SC:wght@400;500;700;900&display=swap" rel="stylesheet">
+  <title>云朵跨境标题生成器</title>
   <style>
-    body { font-family: 'Noto Sans SC', system-ui, -apple-system, 'PingFang SC', 'Microsoft YaHei', sans-serif; }
-    .brand-text {
-      background: linear-gradient(90deg, #31C27C, #1ED0A0 60%, #19C2D6);
-      -webkit-background-clip: text; background-clip: text; color: transparent;
+    :root {
+      --sky1: #eaf6ff; --sky2: #cfe9ff; --blue: #5B9DF9; --blue-d: #3b82f6;
+      --ink: #28486b; --ink-soft: #5b7596; --ok: #1faa6b; --warn: #e08a3c; --red: #e5564b;
     }
-    .brand-bg { background: linear-gradient(135deg, #31C27C, #1ED0A0 55%, #19C2D6); }
-    .card { background: rgba(255,255,255,0.86); backdrop-filter: blur(8px); }
-    .spinner {
-      border: 3px solid #d1fae5; border-top: 3px solid #31C27C;
-      border-radius: 50%; width: 18px; height: 18px;
-      animation: spin 1s linear infinite; display: inline-block;
+    * { box-sizing: border-box; }
+    body {
+      margin: 0; min-height: 100vh;
+      font-family: system-ui, -apple-system, "PingFang SC", "Microsoft YaHei", sans-serif;
+      color: var(--ink);
+      background: linear-gradient(180deg, #eaf6ff 0%, #cfe9ff 48%, #f3faff 100%);
+      overflow-x: hidden;
     }
+    .cloud { position: fixed; background: #fff; border-radius: 60px; opacity: .65; filter: blur(.5px); pointer-events: none; z-index: 0; }
+    .cloud::before, .cloud::after { content: ""; position: absolute; background: #fff; border-radius: 50%; }
+    .cloud::before { width: 62%; height: 150%; top: -55%; left: 14%; }
+    .cloud::after  { width: 45%; height: 120%; top: -38%; left: 52%; }
+    .c1 { width: 130px; height: 42px; top: 8%; left: -40px; animation: drift 38s linear infinite; }
+    .c2 { width: 90px; height: 30px; top: 22%; right: -30px; animation: drift2 30s linear infinite; }
+    .c3 { width: 160px; height: 52px; top: 64%; left: -60px; animation: drift 48s linear infinite; opacity:.5;}
+    .c4 { width: 110px; height: 36px; top: 80%; right: -40px; animation: drift2 36s linear infinite; opacity:.55;}
+    @keyframes drift { from { transform: translateX(0); } to { transform: translateX(60px); } }
+    @keyframes drift2 { from { transform: translateX(0); } to { transform: translateX(-55px); } }
+
+    .wrap { position: relative; z-index: 1; max-width: 980px; margin: 0 auto; padding: 18px 16px 40px; }
+    header.bar {
+      display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 10px 14px; margin-bottom: 16px;
+      background: rgba(255,255,255,.78); backdrop-filter: blur(10px);
+      border: 1px solid rgba(255,255,255,.8); border-radius: 18px; box-shadow: 0 8px 24px rgba(91,157,249,.16);
+    }
+    .brand { display: flex; align-items: center; gap: 10px; }
+    .logo {
+      width: 40px; height: 40px; border-radius: 14px; background: linear-gradient(135deg, #7fc8ff, #5B9DF9);
+      display: flex; align-items: center; justify-content: center; font-size: 22px; box-shadow: 0 6px 14px rgba(91,157,249,.4);
+    }
+    .brand h1 { font-size: 17px; margin: 0; font-weight: 800; letter-spacing:.3px; }
+    .brand p { margin: 0; font-size: 11px; color: var(--ink-soft); }
+    .meta { display: flex; align-items: center; gap: 8px; font-size: 12px; }
+    .pill { padding: 4px 10px; border-radius: 999px; background: #eef5ff; color: var(--ink-soft); }
+    .pill.ok { background: #e3f7ee; color: var(--ok); }
+
+    .hero {
+      text-align: center; padding: 22px 16px; margin-bottom: 18px;
+      background: linear-gradient(135deg, rgba(127,200,255,.35), rgba(91,157,249,.22));
+      border: 1px solid rgba(255,255,255,.8); border-radius: 22px; box-shadow: 0 10px 30px rgba(91,157,249,.18);
+    }
+    .hero h2 { margin: 0 0 6px; font-size: 22px; font-weight: 800; }
+    .hero p { margin: 0; font-size: 13px; color: var(--ink-soft); }
+    .tags { display: flex; gap: 8px; justify-content: center; margin-top: 12px; flex-wrap: wrap; }
+    .tag { font-size: 12px; padding: 5px 12px; border-radius: 999px; background: rgba(255,255,255,.85); color: var(--blue-d); }
+
+    .card {
+      background: rgba(255,255,255,.82); backdrop-filter: blur(10px); border: 1px solid rgba(255,255,255,.8);
+      border-radius: 20px; box-shadow: 0 10px 26px rgba(91,157,249,.16); padding: 18px; margin-bottom: 16px;
+    }
+    .card h3 { margin: 0 0 12px; font-size: 15px; display: flex; align-items: center; gap: 8px; }
+    .ic { width: 30px; height: 30px; border-radius: 10px; background: linear-gradient(135deg,#8fd3ff,#5B9DF9); display:flex; align-items:center; justify-content:center; color:#fff; font-size:15px; }
+    .grid2 { display: grid; gap: 16px; grid-template-columns: 1fr 1fr; }
+    @media (max-width: 760px) { .grid2 { grid-template-columns: 1fr; } }
+
+    .field { width: 100%; border: 1px solid #cfe3fb; border-radius: 11px; padding: 10px 12px; font-size: 13px; background: rgba(255,255,255,.75); outline: none; transition: .15s; margin-bottom: 9px; }
+    .field:focus { border-color: var(--blue); box-shadow: 0 0 0 3px rgba(91,157,249,.22); }
+    .row2 { display: grid; grid-template-columns: 1fr 1fr; gap: 9px; }
+    textarea.field { resize: vertical; }
+    .btn {
+      border: none; cursor: pointer; color: #fff; font-weight: 600; font-size: 14px;
+      background: linear-gradient(135deg, #5B9DF9, #7fc8ff); border-radius: 12px; padding: 12px 16px; width: 100%;
+      transition: transform .15s, box-shadow .15s, filter .15s; box-shadow: 0 8px 18px rgba(91,157,249,.35);
+    }
+    .btn:hover { transform: translateY(-2px); box-shadow: 0 12px 24px rgba(91,157,249,.45); filter: brightness(1.03); }
+    .btn:active { transform: translateY(0); }
+    .btn:disabled { opacity: .6; cursor: default; transform: none; }
+    .btn.ghost { background: #fff; color: var(--blue-d); border: 1px solid var(--blue); box-shadow: none; }
+    .btn.sm { width: auto; padding: 8px 14px; font-size: 13px; }
+    .hint { font-size: 12px; color: var(--ink-soft); margin-top: 8px; line-height: 1.5; }
+    .drop { border: 2px dashed #a9d4ff; border-radius: 14px; padding: 18px; text-align: center; color: var(--blue-d); cursor: pointer; font-size: 13px; transition: .15s; background: rgba(255,255,255,.5); }
+    .drop:hover { background: rgba(127,200,255,.18); }
+    .spinner { width: 16px; height: 16px; border: 3px solid #d6ecff; border-top-color: var(--blue); border-radius: 50%; display: inline-block; animation: spin 1s linear infinite; vertical-align: -3px; margin-right: 6px; }
     @keyframes spin { to { transform: rotate(360deg); } }
-    textarea, input, select { outline: none; }
-    .field {
-      width: 100%; border: 1px solid #e5e7eb; border-radius: 0.75rem;
-      padding: 0.625rem 0.75rem; font-size: 0.875rem; background: rgba(255,255,255,0.7);
-      transition: border-color .15s, box-shadow .15s;
-    }
-    .field:focus { border-color: #34d399; box-shadow: 0 0 0 3px rgba(52,211,153,.25); }
-    .btn-green {
-      background: linear-gradient(135deg, #31C27C, #1ED0A0);
-      transition: transform .15s ease, box-shadow .15s ease, filter .15s ease;
-    }
-    .btn-green:hover { transform: translateY(-1px); box-shadow: 0 10px 22px rgba(49,194,124,.35); filter: brightness(1.03); }
-    .btn-green:active { transform: translateY(0); }
-    .btn-ghost { border: 1px solid #31C27C; color: #31C27C; transition: all .15s; }
-    .btn-ghost:hover { background: rgba(49,194,124,.08); }
-    .icon-box { background: linear-gradient(135deg, #34d399, #2dd4bf); }
+    .hidden { display: none !important; }
+    .result { width: 100%; border: 1px solid #d8e8fb; border-radius: 11px; padding: 10px 12px; font-size: 13px; background: rgba(244,250,255,.85); margin-top: 10px; resize: vertical; min-height: 90px; }
+    .panel { margin-top: 12px; padding: 12px; border-radius: 14px; background: #fff7ec; border: 1px solid #ffe2b8; font-size: 13px; }
+    .panel .sec { font-weight: 700; margin-bottom: 6px; }
+    .out-box { margin-top: 10px; padding: 12px; border-radius: 14px; background: rgba(127,200,255,.14); font-size: 13px; }
+    .out-box .sec { font-weight: 700; color: var(--blue-d); margin-bottom: 4px; }
+    .download-box { background: linear-gradient(135deg, rgba(127,200,255,.3), rgba(91,157,249,.16)); border: 1px solid rgba(255,255,255,.8); }
+    .dl-row { display:flex; gap:10px; flex-wrap:wrap; align-items:center; margin-top:10px; }
+    .dl-link { font-size:12px; color:var(--blue-d); background:#fff; border:1px solid #bfe0ff; border-radius:8px; padding:6px 10px; word-break:break-all; }
+    footer { text-align: center; font-size: 12px; color: var(--ink-soft); margin-top: 10px; }
   </style>
 </head>
-<body class="bg-gradient-to-br from-emerald-50 via-white to-teal-50 min-h-screen text-gray-800">
+<body>
+  <div class="cloud c1"></div><div class="cloud c2"></div><div class="cloud c3"></div><div class="cloud c4"></div>
 
-  <!-- 顶栏 -->
-  <header class="sticky top-0 z-20 backdrop-blur bg-white/70 border-b border-emerald-100">
-    <div class="max-w-5xl mx-auto px-4 py-3 flex items-center justify-between">
-      <div class="flex items-center gap-2.5">
-        <div class="w-9 h-9 rounded-xl brand-bg flex items-center justify-center text-white text-lg shadow-md">📦</div>
+  <div class="wrap">
+    <header class="bar">
+      <div class="brand">
+        <div class="logo">☁️</div>
         <div>
-          <h1 class="text-base font-black leading-tight brand-text">跨境标题工作室</h1>
-          <p class="text-[11px] text-gray-400 leading-tight">AI 生成 · 图片识别 · 合规检测</p>
+          <h1>云朵跨境标题生成器</h1>
+          <p>AI 生成 · 图片识别 · 违规词规避</p>
         </div>
       </div>
-      <div class="flex items-center gap-2 text-xs">
-        <span id="keyStatus" class="px-2.5 py-1 rounded-full bg-gray-100 text-gray-500">Key: 未配置</span>
-        <span class="text-gray-400">v<span id="appVersion"></span></span>
-        <button onclick="checkUpdate()" class="btn-ghost px-3 py-1 rounded-full">检查更新</button>
+      <div class="meta">
+        <span id="keyStatus" class="pill">Key: 未配置</span>
+        <span class="pill">v<span id="appVersion"></span></span>
+        <button onclick="checkUpdate()" class="btn ghost sm">检查更新</button>
       </div>
-    </div>
-  </header>
+    </header>
 
-  <main class="max-w-5xl mx-auto px-4 py-6 space-y-6">
-
-    <!-- Hero 横幅 -->
-    <section class="brand-bg rounded-3xl p-6 md:p-8 text-white shadow-lg relative overflow-hidden">
-      <div class="absolute -right-10 -top-10 w-40 h-40 bg-white/10 rounded-full blur-2xl"></div>
-      <div class="absolute right-16 bottom-0 w-24 h-24 bg-white/10 rounded-full blur-2xl"></div>
-      <h2 class="text-2xl md:text-3xl font-black mb-2 relative">🛒 一键生成高转化跨境标题</h2>
-      <p class="text-white/85 text-sm max-w-xl relative">输入商品信息或上传图片，AI 自动产出 Amazon / Temu 热搜标题，并实时检测规避平台违规词。</p>
-      <div class="mt-4 flex flex-wrap gap-2 relative">
-        <span class="px-3 py-1 rounded-full text-xs bg-white/15">⚡ DeepSeek 驱动</span>
-        <span class="px-3 py-1 rounded-full text-xs bg-white/15">🛡️ 违规词防护</span>
-        <span class="px-3 py-1 rounded-full text-xs bg-white/15">🌐 中英双语</span>
+    <section class="hero">
+      <h2>☁️ 一键生成高转化跨境标题</h2>
+      <p>输入商品信息或上传图片，AI 自动产出 Amazon / Temu 长尾标题，并实时检测规避平台违规词。</p>
+      <div class="tags">
+        <span class="tag">⚡ DeepSeek 驱动</span>
+        <span class="tag">🛡️ 违规词防护</span>
+        <span class="tag">🌐 中英双语</span>
+        <span class="tag">💡 长尾词打法</span>
       </div>
     </section>
 
-    <!-- API 设置 -->
-    <section class="card rounded-2xl shadow-sm border border-emerald-100 p-5">
-      <div class="flex items-center gap-2 mb-3">
-        <span class="w-7 h-7 rounded-lg bg-emerald-100 text-emerald-600 flex items-center justify-center text-sm">🔑</span>
-        <h2 class="font-bold">DeepSeek API 设置</h2>
+    <section class="card download-box">
+      <div style="display:flex;align-items:center;gap:8px;margin-bottom:4px;">
+        <span class="ic">⬇️</span><h3 style="margin:0;">下载离线桌面软件</h3>
       </div>
-      <div class="flex flex-col sm:flex-row gap-3">
-        <input id="apiKey" type="password" placeholder="粘贴你的 DeepSeek API Key（sk-...）" class="field flex-1" />
-        <button onclick="saveKey()" class="btn-green text-white px-5 py-2.5 rounded-xl font-medium whitespace-nowrap">保存 Key</button>
+      <p class="hint" style="margin:0 0 8px;">不想联网用网站？下载一个单文件版，存到电脑任意位置，双击用浏览器打开即用（联网调你的 DeepSeek Key，不依赖服务器）。桌面 .exe 版也在打包中，稍后提供。</p>
+      <div class="dl-row">
+        <a class="btn sm" href="/cloud-title-app.html" style="text-decoration:none;text-align:center;">⬇️ 下载离线 HTML 版</a>
+        <button class="btn ghost sm" onclick="copyDl()">复制下载链接</button>
       </div>
-      <p id="keyHint" class="text-xs text-gray-400 mt-2">Key 保存在你浏览器本地（localStorage），不会上传服务器；也可在部署平台的环境变量里配置。</p>
+      <div id="dlUrl" class="dl-link hidden"></div>
     </section>
 
-    <!-- 两个功能卡片 -->
-    <div class="grid gap-6 md:grid-cols-2">
+    <section class="card">
+      <div style="display:flex;align-items:center;gap:8px;margin-bottom:10px;">
+        <span class="ic">🔑</span><h3 style="margin:0;">DeepSeek API 设置</h3>
+      </div>
+      <div class="row2">
+        <input id="apiKey" type="password" class="field" style="margin-bottom:0;" placeholder="粘贴你的 DeepSeek API Key（sk-...）" />
+        <button class="btn sm" onclick="saveKey()">保存 Key</button>
+      </div>
+      <p class="hint" id="keyHint">Key 保存在你浏览器本地（localStorage），不会上传服务器；也可在部署平台的环境变量里配置。</p>
+    </section>
 
-      <!-- 标题生成 -->
-      <section class="card rounded-2xl shadow-sm border border-emerald-100 p-5 flex flex-col">
-        <div class="flex items-center gap-2 mb-4">
-          <span class="w-8 h-8 rounded-xl icon-box text-white flex items-center justify-center">📝</span>
-          <h2 class="font-bold">标题生成 / 优化</h2>
+    <div class="grid2">
+      <section class="card">
+        <h3><span class="ic">📝</span> 标题生成 / 优化</h3>
+        <div class="row2">
+          <select id="platform" class="field" style="margin-bottom:9px;"><option value="amazon">Amazon</option><option value="temu">Temu</option></select>
+          <select id="language" class="field" style="margin-bottom:9px;"><option value="cn">中文标题</option><option value="en">英文标题</option></select>
         </div>
-        <div class="grid grid-cols-2 gap-3 mb-3">
-          <select id="platform" class="field">
-            <option value="amazon">Amazon</option>
-            <option value="temu">Temu</option>
-          </select>
-          <select id="language" class="field">
-            <option value="cn">中文标题</option>
-            <option value="en">英文标题</option>
-          </select>
-        </div>
-        <div class="space-y-2.5">
-          <input id="f_product" placeholder="商品名称" class="field" />
-          <input id="f_category" placeholder="品类" class="field" />
-          <input id="f_keywords" placeholder="核心关键词（逗号分隔）" class="field" />
-          <input id="f_audience" placeholder="目标人群" class="field" />
-          <input id="f_features" placeholder="核心卖点/功能" class="field" />
-          <textarea id="f_existing" rows="2" placeholder="已有标题（填写则优化，留空则生成新标题）" class="field"></textarea>
-        </div>
-        <button onclick="genTitle()" class="btn-green mt-4 w-full text-white py-3 rounded-xl font-semibold">✨ 生成标题</button>
-        <div id="titleLoading" class="hidden mt-3 text-sm text-emerald-600"><span class="spinner"></span> 生成中...</div>
-        <textarea id="titleResult" rows="6" readonly placeholder="结果会显示在这里" class="field mt-3 bg-gray-50/70"></textarea>
-        <div id="titleCompliance" class="hidden mt-3 p-3 bg-amber-50 border border-amber-200 rounded-xl text-sm"></div>
+        <input id="f_product" class="field" placeholder="商品名称" />
+        <input id="f_category" class="field" placeholder="品类" />
+        <input id="f_keywords" class="field" placeholder="核心关键词（逗号分隔）" />
+        <input id="f_audience" class="field" placeholder="目标人群" />
+        <input id="f_features" class="field" placeholder="核心卖点 / 功能" />
+        <textarea id="f_existing" class="field" rows="2" placeholder="已有标题（填写则优化，留空则生成新标题）"></textarea>
+        <button id="genBtn" class="btn" onclick="genTitle()">✨ 生成标题</button>
+        <div id="titleLoading" class="hidden hint"><span class="spinner"></span>生成中…</div>
+        <textarea id="titleResult" class="result" readonly placeholder="结果会显示在这里"></textarea>
+        <div id="titleCompliance" class="panel hidden"></div>
       </section>
 
-      <!-- 图片分析 -->
-      <section class="card rounded-2xl shadow-sm border border-emerald-100 p-5 flex flex-col">
-        <div class="flex items-center gap-2 mb-4">
-          <span class="w-8 h-8 rounded-xl icon-box text-white flex items-center justify-center">🖼️</span>
-          <h2 class="font-bold">图片识别 · 热搜词 / 痛点 / 卖点</h2>
+      <section class="card">
+        <h3><span class="ic">🖼️</span> 图片识别 · 热搜词 / 痛点 / 卖点</h3>
+        <label class="drop"><input id="imageFile" type="file" accept="image/*" class="hidden" />📤 点击选择商品图片</label>
+        <button id="anaBtn" class="btn" onclick="analyzeImage()" style="margin-top:10px;">🔍 识别分析</button>
+        <div id="imgLoading" class="hidden hint"><span class="spinner"></span>分析中…</div>
+        <div id="imgResult" class="hidden out-box">
+          <div class="sec">📦 商品识别</div><div id="r_product" style="color:var(--ink-soft);"></div>
+          <div class="sec" style="margin-top:8px;">🔥 热搜词</div><div id="r_hotwords" style="color:var(--blue-d);font-weight:600;"></div>
+          <div class="sec" style="margin-top:8px;">😣 用户痛点</div><ul id="r_pain" style="margin:4px 0 0;padding-left:18px;color:var(--ink-soft);"></ul>
+          <div class="sec" style="margin-top:8px;">✨ 核心卖点</div><ul id="r_sell" style="margin:4px 0 0;padding-left:18px;color:var(--ink-soft);"></ul>
         </div>
-        <label class="cursor-pointer">
-          <input id="imageFile" type="file" accept="image/*" class="hidden" />
-          <div class="w-full border-2 border-dashed border-emerald-200 rounded-xl py-5 text-center text-sm text-emerald-600 hover:bg-emerald-50/50 transition">
-            📤 点击选择商品图片
-          </div>
-        </label>
-        <button onclick="analyzeImage()" class="btn-green mt-3 w-full text-white py-3 rounded-xl font-semibold">🔍 识别分析</button>
-        <div id="imgLoading" class="hidden mt-3 text-sm text-emerald-600"><span class="spinner"></span> 分析中...</div>
-
-        <div id="imgResult" class="hidden mt-4 space-y-3 text-sm">
-          <div class="p-3 bg-emerald-50/60 rounded-xl">
-            <div class="font-medium mb-1 text-emerald-700">商品识别</div>
-            <div id="r_product" class="text-gray-600"></div>
-          </div>
-          <div class="p-3 bg-emerald-50/60 rounded-xl">
-            <div class="font-medium mb-1 text-emerald-700">🔥 热搜词</div>
-            <div id="r_hotwords" class="text-emerald-700 font-medium"></div>
-          </div>
-          <div class="p-3 bg-emerald-50/60 rounded-xl">
-            <div class="font-medium mb-1 text-emerald-700">😣 用户痛点</div>
-            <ul id="r_pain" class="list-disc list-inside text-gray-600"></ul>
-          </div>
-          <div class="p-3 bg-emerald-50/60 rounded-xl">
-            <div class="font-medium mb-1 text-emerald-700">✨ 核心卖点</div>
-            <ul id="r_sell" class="list-disc list-inside text-gray-600"></ul>
-          </div>
-        </div>
-        <textarea id="imgRaw" rows="6" readonly placeholder="AI 原始输出会显示在这里" class="field mt-3 bg-gray-50/70 text-xs"></textarea>
-        <div id="imgCompliance" class="hidden mt-3 p-3 bg-amber-50 border border-amber-200 rounded-xl text-sm"></div>
+        <textarea id="imgRaw" class="result" readonly placeholder="AI 原始输出会显示在这里"></textarea>
+        <div id="imgCompliance" class="panel hidden"></div>
       </section>
-
     </div>
-  </main>
 
-  <footer class="text-center text-xs text-gray-400 py-6">
-    <span id="footVersion"></span> · 图片/文本由 DeepSeek 官方接口处理 · Key 仅存你的浏览器本地
-  </footer>
+    <footer><span id="footVersion"></span> · 图片/文本由 DeepSeek 官方接口处理 · Key 仅存你的浏览器本地</footer>
+  </div>
 
   <script>
     const $ = (id) => document.getElementById(id);
     const LS_KEY = "deepseek_api_key";
-
-    // 判断是否在 Netlify 部署环境
-    const isNetlify = location.hostname.includes("netlify.app") ||
-                      location.hostname.includes("netlify.com");
-    // 接口基址：本地走 /api，云端走 Netlify 函数
+    const isNetlify = location.hostname.includes("netlify.app") || location.hostname.includes("netlify.com");
     const API_BASE = isNetlify ? "/.netlify/functions/api" : "/api";
 
-    function getKey() {
-      return (localStorage.getItem(LS_KEY) || "").trim();
-    }
-    function setKey(k) {
-      localStorage.setItem(LS_KEY, k);
-    }
+    function getKey() { return (localStorage.getItem(LS_KEY) || "").trim(); }
+    function setKey(k) { localStorage.setItem(LS_KEY, k); }
 
     async function loadStatus() {
-      const r = await fetch(API_BASE + '/status').then(r => r.json());
-      $('appVersion').textContent = r.version;
-      $('footVersion').textContent = 'v' + r.version;
+      const r = await fetch(API_BASE + "/status").then(r => r.json());
+      $("appVersion").textContent = r.version;
+      $("footVersion").textContent = "v" + r.version;
       const k = getKey();
       if (k) {
-        $('keyStatus').textContent = 'Key: 已配置';
-        $('keyStatus').classList.replace('text-gray-500', 'text-emerald-600');
-        $('keyStatus').classList.replace('bg-gray-100', 'bg-emerald-100');
-        $('apiKey').value = k;
+        $("keyStatus").textContent = "Key: 已配置";
+        $("keyStatus").classList.add("ok");
+        $("apiKey").value = k;
       }
-      if (isNetlify) {
-        $('keyHint').textContent = '检测到云端部署：Key 请填在这里（浏览器本地保存），或在 Netlify 后台配置环境变量 DEEPSEEK_API_KEY。';
-      }
+      if (isNetlify) $("keyHint").textContent = "检测到云端部署：Key 请填在这里（浏览器本地保存），或在 Netlify 后台配置环境变量 DEEPSEEK_API_KEY。";
     }
 
-    async function saveKey() {
-      const key = $('apiKey').value.trim();
-      if (!key) { alert('请输入 Key'); return; }
+    function saveKey() {
+      const key = $("apiKey").value.trim();
+      if (!key) { alert("请输入 Key"); return; }
       setKey(key);
-      // 本地 Flask 环境额外写入 .env（云端忽略）
       if (!isNetlify) {
-        await fetch(API_BASE + '/save-key', {
-          method: 'POST',
-          headers: {'Content-Type': 'application/json'},
-          body: JSON.stringify({api_key: key})
-        }).then(r => r.json()).then(r => alert(r.msg));
-      } else {
-        alert('Key 已保存到本浏览器，可直接使用');
-      }
+        fetch(API_BASE + "/save-key", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ api_key: key }) })
+          .then(r => r.json()).then(r => alert(r.msg));
+      } else { alert("Key 已保存到本浏览器，可直接使用"); }
       loadStatus();
     }
 
     async function genTitle() {
       const key = getKey();
-      if (!key) { alert('请先在上方填写 DeepSeek API Key'); return; }
-      $('titleLoading').classList.remove('hidden');
-      $('titleResult').value = '';
+      if (!key) { alert("请先在上方填写 DeepSeek API Key"); return; }
+      const b = $("genBtn"); b.disabled = true;
+      $("titleLoading").classList.remove("hidden");
+      $("titleResult").value = "";
       const fields = {
-        product: $('f_product').value,
-        category: $('f_category').value,
-        keywords: $('f_keywords').value,
-        audience: $('f_audience').value,
-        features: $('f_features').value,
-        existing_title: $('f_existing').value,
+        product: $("f_product").value, category: $("f_category").value, keywords: $("f_keywords").value,
+        audience: $("f_audience").value, features: $("f_features").value, existing_title: $("f_existing").value,
       };
-      const r = await fetch(API_BASE + '/generate-title', {
-        method: 'POST',
-        headers: {'Content-Type': 'application/json'},
-        body: JSON.stringify({
-          api_key: key,
-          platform: $('platform').value,
-          language: $('language').value,
-          fields
-        })
+      const r = await fetch(API_BASE + "/generate-title", {
+        method: "POST", headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ api_key: key, platform: $("platform").value, language: $("language").value, fields }),
       }).then(r => r.json());
-      $('titleLoading').classList.add('hidden');
+      $("titleLoading").classList.add("hidden");
+      b.disabled = false;
       if (!r.ok) { alert(r.msg); return; }
-      $('titleResult').value = r.result;
-      renderCompliance('titleCompliance', r);
+      $("titleResult").value = r.result;
+      renderCompliance("titleCompliance", r);
     }
 
     async function analyzeImage() {
       const key = getKey();
-      if (!key) { alert('请先在上方填写 DeepSeek API Key'); return; }
-      const file = $('imageFile').files[0];
-      if (!file) { alert('请先选择图片'); return; }
-      $('imgLoading').classList.remove('hidden');
-      $('imgResult').classList.add('hidden');
-
-      // 前端压缩 + 转 base64
+      if (!key) { alert("请先在上方填写 DeepSeek API Key"); return; }
+      const file = $("imageFile").files[0];
+      if (!file) { alert("请先选择图片"); return; }
+      const b = $("anaBtn"); b.disabled = true;
+      $("imgLoading").classList.remove("hidden");
+      $("imgResult").classList.add("hidden");
       const dataUrl = await compressImage(file, 1280);
-      const b64 = dataUrl.split(',')[1];
-      const mime = dataUrl.split(':')[1].split(';')[0];
-
-      const r = await fetch(API_BASE + '/analyze-image', {
-        method: 'POST',
-        headers: {'Content-Type': 'application/json'},
-        body: JSON.stringify({ api_key: key, image_base64: b64, mime })
+      const b64 = dataUrl.split(",")[1];
+      const mime = dataUrl.split(":")[1].split(";")[0];
+      const r = await fetch(API_BASE + "/analyze-image", {
+        method: "POST", headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ api_key: key, image_base64: b64, mime }),
       }).then(r => r.json());
-      $('imgLoading').classList.add('hidden');
+      $("imgLoading").classList.add("hidden");
+      b.disabled = false;
       if (!r.ok) { alert(r.msg); return; }
-      $('imgRaw').value = r.result;
+      $("imgRaw").value = r.result;
       const p = r.parsed;
-      $('r_product').textContent = p.product || '-';
-      $('r_hotwords').textContent = p.hotwords || '-';
-      $('r_pain').innerHTML = (p.painpoints || []).map(x => `<li>${x}</li>`).join('');
-      $('r_sell').innerHTML = (p.sellingpoints || []).map(x => `<li>${x}</li>`).join('');
-      $('imgResult').classList.remove('hidden');
-      renderCompliance('imgCompliance', r);
+      $("r_product").textContent = p.product || "-";
+      $("r_hotwords").textContent = p.hotwords || "-";
+      $("r_pain").innerHTML = (p.painpoints || []).map(x => "<li>" + escapeHtml(x) + "</li>").join("");
+      $("r_sell").innerHTML = (p.sellingpoints || []).map(x => "<li>" + escapeHtml(x) + "</li>").join("");
+      $("imgResult").classList.remove("hidden");
+      renderCompliance("imgCompliance", r);
     }
 
     function compressImage(file, maxDim) {
@@ -280,63 +275,60 @@
           const img = new Image();
           img.onload = () => {
             let { width, height } = img;
-            if (width > height && width > maxDim) {
-              height = Math.round(height * maxDim / width); width = maxDim;
-            } else if (height > maxDim) {
-              width = Math.round(width * maxDim / height); height = maxDim;
-            }
-            const canvas = document.createElement('canvas');
-            canvas.width = width; canvas.height = height;
-            canvas.getContext('2d').drawImage(img, 0, 0, width, height);
-            resolve(canvas.toDataURL('image/jpeg', 0.85));
+            if (width > height && width > maxDim) { height = Math.round(height * maxDim / width); width = maxDim; }
+            else if (height > maxDim) { width = Math.round(width * maxDim / height); height = maxDim; }
+            const cv = document.createElement("canvas");
+            cv.width = width; cv.height = height;
+            cv.getContext("2d").drawImage(img, 0, 0, width, height);
+            resolve(cv.toDataURL("image/jpeg", 0.85));
           };
-          img.onerror = reject;
-          img.src = reader.result;
+          img.onerror = reject; img.src = reader.result;
         };
-        reader.onerror = reject;
-        reader.readAsDataURL(file);
+        reader.onerror = reject; reader.readAsDataURL(file);
       });
     }
 
     function escapeHtml(s) {
-      return (s || '').toString()
-        .replace(/&/g, '&amp;').replace(/</g, '&lt;')
-        .replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+      return (s || "").toString().replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
     }
 
-    // 渲染违规词检测与规避面板
     function renderCompliance(elId, r) {
       const el = $(elId);
       const avoided = r.avoided || [];
       const hits = r.static_hits || [];
       if (!avoided.length && !hits.length) {
-        el.innerHTML = `<div class="text-emerald-700 font-medium">✅ 未检测到违规词，内容合规</div>`;
-        el.classList.remove('hidden');
-        return;
+        el.innerHTML = `<div style="color:var(--ok);font-weight:600;">✅ 未检测到违规词，内容合规</div>`;
+        el.classList.remove("hidden"); return;
       }
-      let html = `<div class="font-semibold text-gray-800 mb-2">🛡️ 平台违规词检测与规避</div>`;
+      let html = `<div class="sec">🛡️ 平台违规词检测与规避</div>`;
       if (avoided.length) {
-        html += `<div class="text-xs text-gray-500 mb-1">AI 已自动规避 / 改写以下违规表述：</div>`;
-        html += `<ul class="space-y-1 mb-2">` + avoided.map(c =>
-          `<li><span class="text-red-600 font-medium">${escapeHtml(c.word || '')}</span>` +
-          (c.replacement ? ` → <span class="text-emerald-700">${escapeHtml(c.replacement)}</span>` : ``) +
-          ` <span class="text-gray-400 text-xs">(${escapeHtml(c.reason || '平台合规')})</span></li>`
-        ).join('') + `</ul>`;
+        html += `<div class="sub" style="color:var(--ink-soft);font-size:12px;margin:2px 0 6px;">AI 已自动规避 / 改写以下违规表述：</div><ul>` +
+          avoided.map(c => `<li><span style="color:var(--red);font-weight:600;">${escapeHtml(c.word || "")}</span>` +
+          (c.replacement ? ` → <span style="color:var(--ok);">${escapeHtml(c.replacement)}</span>` : ``) +
+          (c.reason ? ` <span style="color:var(--ink-soft);font-size:12px;">(${escapeHtml(c.reason)})</span>` : ``) + `</li>`).join("") + `</ul>`;
       }
       if (hits.length) {
-        html += `<div class="text-xs text-gray-500 mb-1">⚠️ 静态词库仍命中（建议人工复核）：</div>`;
+        html += `<div class="sub" style="color:var(--ink-soft);font-size:12px;margin:4px 0 6px;">⚠️ 静态词库仍命中（建议人工复核）：</div>`;
         const byCat = {};
         hits.forEach(h => { (byCat[h.label] ||= []).push(h.word); });
-        html += `<ul class="space-y-1">` + Object.entries(byCat).map(([label, words]) =>
-          `<li><span class="text-orange-600">${escapeHtml(label)}</span>：<span class="text-gray-700">${words.map(escapeHtml).join('、')}</span></li>`
-        ).join('') + `</ul>`;
+        html += `<ul>` + Object.entries(byCat).map(([label, words]) =>
+          `<li><span style="color:var(--warn);">${escapeHtml(label)}</span>：<span style="color:var(--ink);">${words.map(escapeHtml).join("、")}</span></li>`
+        ).join("") + `</ul>`;
       }
       el.innerHTML = html;
-      el.classList.remove('hidden');
+      el.classList.remove("hidden");
+    }
+
+    function copyDl() {
+      const url = location.origin + "/cloud-title-app.html";
+      navigator.clipboard?.writeText(url).then(
+        () => { const d = $("dlUrl"); d.textContent = "已复制：" + url; d.classList.remove("hidden"); },
+        () => { const d = $("dlUrl"); d.textContent = url; d.classList.remove("hidden"); }
+      );
     }
 
     async function checkUpdate() {
-      const r = await fetch(API_BASE + '/check-update').then(r => r.json());
+      const r = await fetch(API_BASE + "/check-update").then(r => r.json());
       alert(r.msg + `（当前 v${r.current_version}）`);
     }
 
