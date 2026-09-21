@@ -130,7 +130,13 @@ async function callDeepSeek(messages, apiKey, model = TEXT_MODEL, maxTokens = 20
       return `ERROR: DeepSeek 接口返回错误 - HTTP ${resp.status} ${hint} ${text.slice(0, 200)}`;
     }
     const data = await resp.json();
-    return data.choices?.[0]?.message?.content?.trim() || "ERROR: DeepSeek 返回为空";
+    const m0 = data.choices?.[0]?.message || {};
+    const content = (m0.content || "").trim();
+    if (content) return content;
+    // 兼容推理模型：内容在 reasoning_content 里
+    const reasoning = (m0.reasoning_content || "").trim();
+    if (reasoning) return reasoning;
+    return `ERROR: DeepSeek 返回为空 finish_reason=${data.choices?.[0]?.finish_reason || "unknown"}`;
   } catch (err) {
     return `ERROR: 调用失败 - ${err.message || err}`;
   }

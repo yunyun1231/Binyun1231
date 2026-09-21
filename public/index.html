@@ -259,7 +259,7 @@
       if (m.includes("http 429")) return "请求太频繁，被 DeepSeek 限流了，请等几秒再点一次。";
       if (m.includes("http 400")) return "请求参数有误：" + (msg || "");
       if (m.includes("deepseek") || m.includes("返回为空") || m.includes("401") || m.includes("unauthorized") || m.includes("invalid")) {
-        return "调用 DeepSeek 失败：请确认你填写的 API Key 有效（以 sk- 开头）。若 Key 无误仍报错，可能是 DeepSeek 接口繁忙，请稍后重试。";
+        return "调用 DeepSeek 失败（接口繁忙或返回异常），请稍后重试。原始错误：" + (msg || "无");
       }
       return msg || "请求失败，请稍后重试。";
     }
