@@ -89,9 +89,6 @@
     .panel .sec { font-weight: 700; margin-bottom: 6px; }
     .out-box { margin-top: 10px; padding: 12px; border-radius: 14px; background: rgba(127,200,255,.14); font-size: 13px; }
     .out-box .sec { font-weight: 700; color: var(--blue-d); margin-bottom: 4px; }
-    .download-box { background: linear-gradient(135deg, rgba(127,200,255,.3), rgba(91,157,249,.16)); border: 1px solid rgba(255,255,255,.8); }
-    .dl-row { display:flex; gap:10px; flex-wrap:wrap; align-items:center; margin-top:10px; }
-    .dl-link { font-size:12px; color:var(--blue-d); background:#fff; border:1px solid #bfe0ff; border-radius:8px; padding:6px 10px; word-break:break-all; }
     footer { text-align: center; font-size: 12px; color: var(--ink-soft); margin-top: 10px; }
   </style>
 </head>
@@ -125,18 +122,6 @@
       </div>
     </section>
 
-    <section class="card download-box">
-      <div style="display:flex;align-items:center;gap:8px;margin-bottom:4px;">
-        <span class="ic">⬇️</span><h3 style="margin:0;">下载离线桌面软件</h3>
-      </div>
-      <p class="hint" style="margin:0 0 8px;">不想联网用网站？下载一个单文件版，存到电脑任意位置，双击用浏览器打开即用（联网调你的 DeepSeek Key，不依赖服务器）。桌面 .exe 版也在打包中，稍后提供。</p>
-      <div class="dl-row">
-        <a class="btn sm" href="/cloud-title-app.html" style="text-decoration:none;text-align:center;">⬇️ 下载离线 HTML 版</a>
-        <button class="btn ghost sm" onclick="copyDl()">复制下载链接</button>
-      </div>
-      <div id="dlUrl" class="dl-link hidden"></div>
-    </section>
-
     <section class="card">
       <div style="display:flex;align-items:center;gap:8px;margin-bottom:10px;">
         <span class="ic">🔑</span><h3 style="margin:0;">DeepSeek API 设置</h3>
@@ -145,7 +130,7 @@
         <input id="apiKey" type="password" class="field" style="margin-bottom:0;" placeholder="粘贴你的 DeepSeek API Key（sk-...）" />
         <button class="btn sm" onclick="saveKey()">保存 Key</button>
       </div>
-      <p class="hint" id="keyHint">Key 保存在你浏览器本地（localStorage），不会上传服务器；也可在部署平台的环境变量里配置。</p>
+      <p class="hint" id="keyHint">Key 保存在你浏览器本地（localStorage），不会上传服务器。请填写你自己的 DeepSeek Key（sk- 开头），保存后即可联网生成标题 / 分析图片。</p>
     </section>
 
     <div class="grid2">
@@ -205,7 +190,6 @@
         $("keyStatus").classList.add("ok");
         $("apiKey").value = k;
       }
-      if (isNetlify) $("keyHint").textContent = "检测到云端部署：Key 请填在这里（浏览器本地保存），或在 Netlify 后台配置环境变量 DEEPSEEK_API_KEY。";
     }
 
     function saveKey() {
@@ -221,7 +205,7 @@
 
     async function genTitle() {
       const key = getKey();
-      if (!key) { alert("请先在上方填写 DeepSeek API Key"); return; }
+      if (!key) { alert("请先在上方填写 DeepSeek API Key（sk- 开头）"); return; }
       const b = $("genBtn"); b.disabled = true;
       $("titleLoading").classList.remove("hidden");
       $("titleResult").value = "";
@@ -235,14 +219,14 @@
       }).then(r => r.json());
       $("titleLoading").classList.add("hidden");
       b.disabled = false;
-      if (!r.ok) { alert(r.msg); return; }
+      if (!r.ok) { alert(friendlyErr(r.msg)); return; }
       $("titleResult").value = r.result;
       renderCompliance("titleCompliance", r);
     }
 
     async function analyzeImage() {
       const key = getKey();
-      if (!key) { alert("请先在上方填写 DeepSeek API Key"); return; }
+      if (!key) { alert("请先在上方填写 DeepSeek API Key（sk- 开头）"); return; }
       const file = $("imageFile").files[0];
       if (!file) { alert("请先选择图片"); return; }
       const b = $("anaBtn"); b.disabled = true;
@@ -257,7 +241,7 @@
       }).then(r => r.json());
       $("imgLoading").classList.add("hidden");
       b.disabled = false;
-      if (!r.ok) { alert(r.msg); return; }
+      if (!r.ok) { alert(friendlyErr(r.msg)); return; }
       $("imgRaw").value = r.result;
       const p = r.parsed;
       $("r_product").textContent = p.product || "-";
@@ -266,6 +250,14 @@
       $("r_sell").innerHTML = (p.sellingpoints || []).map(x => "<li>" + escapeHtml(x) + "</li>").join("");
       $("imgResult").classList.remove("hidden");
       renderCompliance("imgCompliance", r);
+    }
+
+    function friendlyErr(msg) {
+      const m = (msg || "").toLowerCase();
+      if (m.includes("deepseek") || m.includes("返回为空") || m.includes("401") || m.includes("unauthorized") || m.includes("invalid")) {
+        return "调用 DeepSeek 失败：请确认你填写的 API Key 有效（以 sk- 开头）。若 Key 无误仍报错，可能是 DeepSeek 接口繁忙，请稍后重试。";
+      }
+      return msg || "请求失败，请稍后重试。";
     }
 
     function compressImage(file, maxDim) {
@@ -317,14 +309,6 @@
       }
       el.innerHTML = html;
       el.classList.remove("hidden");
-    }
-
-    function copyDl() {
-      const url = location.origin + "/cloud-title-app.html";
-      navigator.clipboard?.writeText(url).then(
-        () => { const d = $("dlUrl"); d.textContent = "已复制：" + url; d.classList.remove("hidden"); },
-        () => { const d = $("dlUrl"); d.textContent = url; d.classList.remove("hidden"); }
-      );
     }
 
     async function checkUpdate() {
