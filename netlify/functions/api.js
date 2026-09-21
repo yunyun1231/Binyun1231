@@ -122,7 +122,12 @@ async function callDeepSeek(messages, apiKey, model = TEXT_MODEL, maxTokens = 20
 
     if (!resp.ok) {
       const text = await resp.text().catch(() => "");
-      return `ERROR: DeepSeek 接口返回错误 - HTTP ${resp.status} ${text.slice(0, 200)}`;
+      let hint = "";
+      if (resp.status === 401) hint = "API Key 无效或复制不完整";
+      else if (resp.status === 402) hint = "DeepSeek 账户余额不足，请充值";
+      else if (resp.status === 429) hint = "请求太频繁被限流，请稍等几秒再试";
+      else if (resp.status === 400) hint = "请求参数或模型名有误";
+      return `ERROR: DeepSeek 接口返回错误 - HTTP ${resp.status} ${hint} ${text.slice(0, 200)}`;
     }
     const data = await resp.json();
     return data.choices?.[0]?.message?.content?.trim() || "ERROR: DeepSeek 返回为空";

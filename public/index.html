@@ -254,6 +254,10 @@
 
     function friendlyErr(msg) {
       const m = (msg || "").toLowerCase();
+      if (m.includes("http 401")) return "API Key 无效或复制不完整：请到 DeepSeek 开放平台（platform.deepseek.com）的 API Keys 页面重新复制完整 Key（以 sk- 开头，注意前后不要带空格），再重新保存。";
+      if (m.includes("http 402")) return "DeepSeek 账户余额不足：请登录 platform.deepseek.com 充值后再试。";
+      if (m.includes("http 429")) return "请求太频繁，被 DeepSeek 限流了，请等几秒再点一次。";
+      if (m.includes("http 400")) return "请求参数有误：" + (msg || "");
       if (m.includes("deepseek") || m.includes("返回为空") || m.includes("401") || m.includes("unauthorized") || m.includes("invalid")) {
         return "调用 DeepSeek 失败：请确认你填写的 API Key 有效（以 sk- 开头）。若 Key 无误仍报错，可能是 DeepSeek 接口繁忙，请稍后重试。";
       }
