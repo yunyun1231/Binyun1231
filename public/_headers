@@ -1,3 +1,7 @@
 /cloud-title-app.html
   Content-Type: text/html; charset=utf-8
   Content-Disposition: attachment; filename="cloud-title-app.html"; filename*=UTF-8''%E8%B7%A8%E5%A2%83%E7%94%B5%E5%95%86%E6%A0%87%E9%A2%98%E7%94%9F%E6%88%90%E5%99%A8.html
+
+/cloud-title-app.exe
+  Content-Type: application/octet-stream
+  Content-Disposition: attachment; filename="cloud-title-app.exe"
