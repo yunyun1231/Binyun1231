@@ -170,8 +170,8 @@ function buildTitleMessages(platform, language, fields) {
         `4. Focus each title on one narrow usage scenario so new listings can gain exposure through long-tail traffic.`;
 
   const fmt = language === "cn"
-    ? "严格按以下格式逐行输出，不要任何额外解释：\n标题1：<完整标题>\n卖点1：<该标题主打的、区别于另外两条的核心卖点，一句话>\n标题2：<完整标题>\n卖点2：<...>\n标题3：<完整标题>\n卖点3：<...>"
-    : "Output strictly in this format, one line each, no extra explanation:\n标题1：<full title>\n卖点1：<the key selling point of this title, one sentence, distinct from the other two>\n标题2：<full title>\n卖点2：<...>\n标题3：<full title>\n卖点3：<...>";
+    ? "输出格式（必须恰好 3 组、共 6 行，逐行输出；不要输出任何解释、前言或 <full title> 之类的占位符，必须写真实内容）：\n标题1：这里写第一条完整标题\n卖点1：这里写第一条主打的、与其他两条不同的核心卖点（一句话）\n标题2：这里写第二条完整标题\n卖点2：这里写第二条的核心卖点（一句话）\n标题3：这里写第三条完整标题\n卖点3：这里写第三条的核心卖点（一句话）"
+    : "Output format (exactly 3 pairs, 6 lines total, line by line; NO explanations, NO placeholder text like <full title> — write the real title and selling point):\n标题1：write the first full title here\n卖点1：write the first title's unique key selling point (one sentence)\n标题2：write the second full title here\n卖点2：write the second title's key selling point (one sentence)\n标题3：write the third full title here\n卖点3：write the third title's key selling point (one sentence)";
 
   const lead = existingTitle
     ? (language === "cn"
@@ -182,8 +182,8 @@ function buildTitleMessages(platform, language, fields) {
         : `You are a senior cross-border e-commerce operator. Based on the product info, generate 3 titles for the ${pf} platform, each emphasizing a distinct selling point.`);
 
   const diffNote = language === "cn"
-    ? "三条标题之间要有明显差异，不要雷同（例如角度1=容量大、角度2=省空间、角度3=材质耐用）。"
-    : "The three titles must differ clearly (e.g. angle1=large capacity, angle2=space-saving, angle3=durable material).";
+    ? "三条标题之间要有明显差异，不要雷同（例如角度1=容量大、角度2=省空间、角度3=材质耐用）。三条都必须输出，缺一不可。"
+    : "The three titles must differ clearly (e.g. angle1=large capacity, angle2=space-saving, angle3=durable material). All 3 pairs are required.";
 
   const sys = lead + "\n" + diffNote + "\n\n" + fmt + "\n\n" + longTailNote + "\n\n" + complianceNote;
 
@@ -194,12 +194,12 @@ function buildTitleMessages(platform, language, fields) {
   return [sys, user];
 }
 
-// 从模型输出里解析出 3 条标题（每条带独立卖点）
+// 从模型输出里解析出 3 条标题（每条带独立卖点），兼容全角/半角冒号及 . 、 - 等分隔符
 function parseTitles(text) {
   const out = [];
   let cur = null;
-  const reTitle = /^\s*标题\s*([1-3])[：:]\s*(.+?)\s*$/;
-  const rePoint = /^\s*卖点\s*([1-3])[：:]\s*(.+?)\s*$/;
+  const reTitle = /^\s*标题\s*([1-3])\s*[：:．.、\-]\s*(.+?)\s*$/;
+  const rePoint = /^\s*卖点\s*([1-3])\s*[：:．.、\-]\s*(.+?)\s*$/;
   for (const line of (text || "").split(/\r?\n/)) {
     const mt = line.match(reTitle);
     const mp = line.match(rePoint);
@@ -210,13 +210,18 @@ function parseTitles(text) {
       cur.point = mp[2].trim();
     }
   }
-  return out.filter((t) => t.title);
+  return out.filter((t) => t.title && !/^</.test(t.title));
 }
 
-async function generateTitle(fields, platform, language, apiKey) {
+async function generateTitle(fields, platform, language, apiKey, strict = false) {
   const [sysMsg, userMsg] = buildTitleMessages(platform, language, fields);
+  const sys = strict
+    ? sysMsg +
+      "\n\n【格式硬性要求】必须输出恰好 3 组，共 6 行：标题1/卖点1/标题2/卖点2/标题3/卖点3。" +
+      "必须写真实的标题和卖点内容，严禁输出 <full title> 等占位符，严禁只输出 1 组，严禁输出任何解释性文字。"
+    : sysMsg;
   const messages = [
-    { role: "system", content: sysMsg },
+    { role: "system", content: sys },
     { role: "user", content: userMsg },
   ];
   return callDeepSeek(messages, apiKey, TEXT_MODEL, 1600);
@@ -326,9 +331,16 @@ exports.handler = async function handler(event, context) {
     const platform = body.platform || "amazon";
     const language = body.language || "cn";
     const fields = body.fields || {};
-    const raw = await generateTitle(fields, platform, language, apiKey);
+    let raw = await generateTitle(fields, platform, language, apiKey);
     if (raw.startsWith("ERROR")) {
       return errResponse(raw);
+    }
+    // 保险：如果模型没按格式输出（解析不到 2 条以上），带更严格指令重试一次
+    if (parseTitles(raw).length < 2) {
+      const retry = await generateTitle(fields, platform, language, apiKey, true);
+      if (!retry.startsWith("ERROR") && parseTitles(retry).length >= parseTitles(raw).length) {
+        raw = retry;
+      }
     }
     const pfLabel = platform === "amazon" ? "Amazon" : "Temu";
     const review = await complianceReview(raw, pfLabel, apiKey);
