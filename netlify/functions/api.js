@@ -175,8 +175,9 @@ function buildTitleMessages(platform, language, fields) {
 
   const titleLang = language === "cn" ? "中文" : "英文";
   const fmt =
-    "直接输出一个 JSON 对象（不要输出任何解释、前言、思考过程或 markdown 代码块标记）。对象必须包含名为 titles 的数组，数组里恰好 3 个对象，每个对象有两个字段：\n" +
+    "直接输出一个 JSON 对象（不要输出任何解释、前言、思考过程或 markdown 代码块标记）。对象必须包含名为 titles 的数组，数组里恰好 3 个对象，每个对象有三个字段：\n" +
     "- title：字符串，根据上面的商品信息现写的一条真实完整的" + titleLang + "标题；严禁照抄任何示例文字、严禁占位符、严禁省略号\n" +
+    "- trans：字符串，该条 title 的翻译（title 是英文就给中文翻译，title 是中文就给英文翻译），必须根据 title 现写，严禁省略号\n" +
     "- point：字符串，该条标题主打的、与其他两条不同的核心卖点，用中文写一句话\n" +
     "三条 title 的切入角度必须互不相同（例如角度1=材质安全、角度2=场景适用、角度3=设计细节）。除 JSON 本身外不要输出任何其他文字。";
 
@@ -243,6 +244,7 @@ function extractTitles(text) {
       const out = arr
         .map((t) => ({
           title: String(t.title || "").trim(),
+          trans: String(t.trans || t.translation || t.zh || "").trim(),
           point: String(t.point || "").trim(),
         }))
         .filter((t) => !isJunk(t.title))
@@ -250,21 +252,21 @@ function extractTitles(text) {
       if (out.length) return out;
     } catch { /* 回退到行式解析 */ }
   }
-  return parseTitles(text).map((t) => ({ title: t.title, point: t.point }));
+  return parseTitles(text).map((t) => ({ title: t.title, trans: t.translation || "", point: t.point }));
 }
 
 // 标题合规改写：JSON 进 JSON 出，保持结构不被破坏
 async function complianceFixTitles(titles, platformLabel, apiKey) {
   if (!titles.length) return { titles, changes: [] };
   const sys =
-    `你是跨境电商平台合规审核专家。用户消息是 ${platformLabel} 平台的商品标题（JSON，titles 数组，每项有 title 和 point 字段）。` +
-    `请逐条检查 title 是否有违规表述（绝对化/夸大用语、医疗功效宣称、虚假促销、未经授权品牌词等），只修改违规处，保留原意、原语言和条数，point 保持原文。` +
-    `严格只返回一个 JSON 对象，不要任何解释、前言或 markdown 标记：对象包含 titles 数组（与输入一一对应、字段同名、内容为合规后的真实标题，必须根据输入现写，严禁照抄任何示例）和 changes 数组（每项含 word、reason 两个字段，word 填你实际改掉的违规词；没有违规则 changes 为空数组）。`;
+    `你是跨境电商平台合规审核专家。用户消息是 ${platformLabel} 平台的商品标题（JSON，titles 数组，每项有 title、trans、point 字段）。` +
+    `请逐条检查 title 是否有违规表述（绝对化/夸大用语、医疗功效宣称、虚假促销、未经授权品牌词等），只修改违规处，保留原意、原语言和条数；trans 和 point 保持原文不动。` +
+    `严格只返回一个 JSON 对象，不要任何解释、前言或 markdown 标记：对象包含 titles 数组（与输入一一对应、字段同名：title 为合规后的真实标题必须根据输入现写严禁照抄任何示例，trans 和 point 原样照抄输入的对应值）和 changes 数组（每项含 word、reason 两个字段，word 填你实际改掉的违规词；没有违规则 changes 为空数组）。`;
   const messages = [
     { role: "system", content: sys },
-    { role: "user", content: JSON.stringify({ titles: titles.map((t) => ({ title: t.title, point: t.point })) }) },
+    { role: "user", content: JSON.stringify({ titles: titles.map((t) => ({ title: t.title, trans: t.trans || "", point: t.point })) }) },
   ];
-  const raw = await callDeepSeek(messages, apiKey, TEXT_MODEL, 1200, 15000, true);
+  const raw = await callDeepSeek(messages, apiKey, TEXT_MODEL, 1400, 15000, true);
   if (raw.startsWith("ERROR")) return { titles, changes: [] };
   try {
     const m = raw.match(/\{[\s\S]*\}/);
@@ -273,12 +275,16 @@ async function complianceFixTitles(titles, platformLabel, apiKey) {
     // 校验：防模板照抄（返回「合规后标题/原卖点」这类示例词）、防条数不符；任一发生就弃用改写、保留原标题
     const badTitle = (s) =>
       !s || TEMPLATE_ECHO_PAT.test(s) || /^</.test(s) || /^[…‥\.。·•\-—_~\s]+$/.test(s);
-    const fixed = arr
-      .map((t) => ({ title: String(t.title || "").trim(), point: String(t.point || "").trim() }))
-      .filter((t) => !badTitle(t.title));
-    if (fixed.length !== titles.length) {
-      return { titles, changes: [] };
-    }
+    // 按输入顺序逐条对应：title 用合规版（校验不过就用原 title），trans/point 永远用原文，防止 AI 篡改或照抄
+    const fixed = titles.map((orig, i) => {
+      const r = arr[i] || {};
+      const newTitle = String(r.title || "").trim();
+      return {
+        title: !badTitle(newTitle) ? newTitle : orig.title,
+        trans: orig.trans || "",
+        point: orig.point || "",
+      };
+    });
     const changes = (Array.isArray(obj.changes) ? obj.changes : []).filter(
       (c) => c && c.word && !TEMPLATE_ECHO_PAT.test(String(c.word)) && !TEMPLATE_ECHO_PAT.test(String(c.reason || ""))
     );
