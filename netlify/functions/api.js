@@ -169,19 +169,19 @@ function buildTitleMessages(platform, language, fields) {
         `3. Write from the buyer's real search intent and clearly state what specific life problem this SKU solves;\n` +
         `4. Focus each title on one narrow usage scenario so new listings can gain exposure through long-tail traffic.`;
 
+  const titleLang = language === "cn" ? "【中文】标题" : "【英文】标题";
   const fmt =
-    "输出格式（必须恰好 3 组、共 9 行，逐行输出；不要输出任何解释、前言或占位符，必须写真实内容）：\n" +
-    "标题1：这里写第一条的【英文标题】\n翻译1：这里写第一条英文标题的【中文翻译】\n卖点1：这里写第一条主打的、与其他两条不同的核心卖点（中文一句话）\n" +
-    "标题2：这里写第二条的【英文标题】\n翻译2：这里写第二条的【中文翻译】\n卖点2：这里写第二条的核心卖点（中文一句话）\n" +
-    "标题3：这里写第三条的【英文标题】\n翻译3：这里写第三条的【中文翻译】\n卖点3：这里写第三条的核心卖点（中文一句话）";
+    "输出格式（必须恰好 3 组、共 6 行，逐行输出；不要输出任何解释、前言，不要输出「…」或任何占位符，必须写真实完整的内容）：\n" +
+    "标题1：这里写第一条的" + titleLang + "\n卖点1：这里写第一条主打的、与其他两条不同的核心卖点（中文一句话）\n" +
+    "标题2：这里写第二条的" + titleLang + "\n卖点2：这里写第二条的核心卖点（中文一句话）\n" +
+    "标题3：这里写第三条的" + titleLang + "\n卖点3：这里写第三条的核心卖点（中文一句话）";
 
   const lead = existingTitle
-    ? `你是资深跨境电商运营。下面是一段已有标题，请保留其商品信息，为${pf}平台优化出 3 条【英文】标题，每条主打一个互不相同卖点，并为每条英文标题附上中文翻译。`
-    : `你是一个资深跨境电商运营。请基于商品信息，为${pf}平台生成 3 条【英文】标题，每条主打一个互不相同卖点，并为每条英文标题附上中文翻译。`;
+    ? `你是资深跨境电商运营。下面是一段已有标题，请保留其商品信息，为${pf}平台优化出 3 条${titleLang}，每条主打一个互不相同卖点。`
+    : `你是一个资深跨境电商运营。请基于商品信息，为${pf}平台生成 3 条${titleLang}，每条主打一个互不相同卖点。`;
 
-  const diffNote = language === "cn"
-    ? "三条标题之间要有明显差异，不要雷同（例如角度1=容量大、角度2=省空间、角度3=材质耐用）。三条都必须输出，缺一不可。"
-    : "The three titles must differ clearly (e.g. angle1=large capacity, angle2=space-saving, angle3=durable material). All 3 pairs are required.";
+  const diffNote =
+    "三条标题之间要有明显差异，不要雷同（例如角度1=容量大、角度2=省空间、角度3=材质耐用）。三条都必须输出、编号必须是1/2/3，缺一不可。卖点一律用中文写。";
 
   const sys = lead + "\n" + diffNote + "\n\n" + fmt + "\n\n" + longTailNote + "\n\n" + complianceNote;
 
@@ -192,18 +192,23 @@ function buildTitleMessages(platform, language, fields) {
   return [sys, user];
 }
 
-// 从模型输出里解析出 3 条标题（每条带中文翻译 + 独立卖点），兼容全角/半角冒号及 . 、 - 等分隔符
+// 从模型输出里解析出 3 条标题（每条带独立卖点），兼容全角/半角冒号及 . 、 - 等分隔符
 function parseTitles(text) {
   const out = [];
+  const seen = new Set();
   let cur = null;
-  const reTitle = /^\s*标题\s*([1-3])\s*[：:．.、\-]\s*(.+?)\s*$/;
-  const reTrans = /^\s*翻译\s*([1-3])\s*[：:．.、\-]\s*(.+?)\s*$/;
-  const rePoint = /^\s*卖点\s*([1-3])\s*[：:．.、\-]\s*(.+?)\s*$/;
+  const reTitle = /^\s*标题\s*([1-9])\s*[：:．.、\-]\s*(.+?)\s*$/;
+  const reTrans = /^\s*翻译\s*([1-9])\s*[：:．.、\-]\s*(.+?)\s*$/;
+  const rePoint = /^\s*卖点\s*([1-9])\s*[：:．.、\-]\s*(.+?)\s*$/;
+  // 无效内容：占位符/省略号/空白装饰符
+  const isJunk = (s) => !s || /^</.test(s) || /^[…‥\.。·•\-—_~]+$/.test(s);
   for (const line of (text || "").split(/\r?\n/)) {
     const mt = line.match(reTitle);
     const mr = line.match(reTrans);
     const mp = line.match(rePoint);
     if (mt) {
+      if (seen.has(mt[1])) continue; // 编号重复时只保留第一次，防止多余卡片
+      seen.add(mt[1]);
       cur = { n: mt[1], title: mt[2].trim(), translation: "", point: "" };
       out.push(cur);
     } else if (mr && cur) {
@@ -212,7 +217,10 @@ function parseTitles(text) {
       cur.point = mp[2].trim();
     }
   }
-  return out.filter((t) => t.title && !/^</.test(t.title));
+  return out
+    .filter((t) => !isJunk(t.title))
+    .map((t) => ({ ...t, point: isJunk(t.point) ? "" : t.point }))
+    .slice(0, 3);
 }
 
 async function generateTitle(fields, platform, language, apiKey, strict = false) {

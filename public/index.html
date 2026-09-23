@@ -242,12 +242,11 @@
       titlesData = titles;
       if (!titles || !titles.length) { box.classList.add("hidden"); box.innerHTML = ""; return; }
       box.innerHTML =
-        `<div class="tc-hint">共生成 ${titles.length} 条标题（英文 + 中文翻译），每条主打不同卖点：</div>` +
+        `<div class="tc-hint">共生成 ${titles.length} 条标题，每条主打不同卖点：</div>` +
         titles.map((t, i) =>
           `<div class="tcard">
             <div class="tnum">方案 ${i + 1}</div>
             <div class="ttitle">${escapeHtml(t.title)}</div>
-            <div class="tzh">🇨🇳 ${escapeHtml(t.translation || "—")}</div>
             <div class="tpoint">✨ 卖点：${escapeHtml(t.point || "—")}</div>
             <button class="btn sm ghost" onclick="copyTitle(${i})">复制这条</button>
           </div>`
