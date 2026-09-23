@@ -169,17 +169,15 @@ function buildTitleMessages(platform, language, fields) {
         `3. Write from the buyer's real search intent and clearly state what specific life problem this SKU solves;\n` +
         `4. Focus each title on one narrow usage scenario so new listings can gain exposure through long-tail traffic.`;
 
-  const fmt = language === "cn"
-    ? "输出格式（必须恰好 3 组、共 6 行，逐行输出；不要输出任何解释、前言或 <full title> 之类的占位符，必须写真实内容）：\n标题1：这里写第一条完整标题\n卖点1：这里写第一条主打的、与其他两条不同的核心卖点（一句话）\n标题2：这里写第二条完整标题\n卖点2：这里写第二条的核心卖点（一句话）\n标题3：这里写第三条完整标题\n卖点3：这里写第三条的核心卖点（一句话）"
-    : "Output format (exactly 3 pairs, 6 lines total, line by line; NO explanations, NO placeholder text like <full title> — write the real title and selling point):\n标题1：write the first full title here\n卖点1：write the first title's unique key selling point (one sentence)\n标题2：write the second full title here\n卖点2：write the second title's key selling point (one sentence)\n标题3：write the third full title here\n卖点3：write the third title's key selling point (one sentence)";
+  const fmt =
+    "输出格式（必须恰好 3 组、共 9 行，逐行输出；不要输出任何解释、前言或占位符，必须写真实内容）：\n" +
+    "标题1：这里写第一条的【英文标题】\n翻译1：这里写第一条英文标题的【中文翻译】\n卖点1：这里写第一条主打的、与其他两条不同的核心卖点（中文一句话）\n" +
+    "标题2：这里写第二条的【英文标题】\n翻译2：这里写第二条的【中文翻译】\n卖点2：这里写第二条的核心卖点（中文一句话）\n" +
+    "标题3：这里写第三条的【英文标题】\n翻译3：这里写第三条的【中文翻译】\n卖点3：这里写第三条的核心卖点（中文一句话）";
 
   const lead = existingTitle
-    ? (language === "cn"
-        ? `你是资深跨境电商运营。下面是一段已有标题，请保留其商品信息，为${pf}平台优化出 3 条标题，每条主打一个互不相同卖点。`
-        : `You are a senior cross-border e-commerce operator. Below is an existing title. Keep its product info and produce 3 optimized titles for the ${pf} platform, each emphasizing a distinct selling point.`)
-    : (language === "cn"
-        ? `你是一个资深跨境电商运营。请基于商品信息，为${pf}平台生成 3 条标题，每条主打一个互不相同卖点。`
-        : `You are a senior cross-border e-commerce operator. Based on the product info, generate 3 titles for the ${pf} platform, each emphasizing a distinct selling point.`);
+    ? `你是资深跨境电商运营。下面是一段已有标题，请保留其商品信息，为${pf}平台优化出 3 条【英文】标题，每条主打一个互不相同卖点，并为每条英文标题附上中文翻译。`
+    : `你是一个资深跨境电商运营。请基于商品信息，为${pf}平台生成 3 条【英文】标题，每条主打一个互不相同卖点，并为每条英文标题附上中文翻译。`;
 
   const diffNote = language === "cn"
     ? "三条标题之间要有明显差异，不要雷同（例如角度1=容量大、角度2=省空间、角度3=材质耐用）。三条都必须输出，缺一不可。"
@@ -194,18 +192,22 @@ function buildTitleMessages(platform, language, fields) {
   return [sys, user];
 }
 
-// 从模型输出里解析出 3 条标题（每条带独立卖点），兼容全角/半角冒号及 . 、 - 等分隔符
+// 从模型输出里解析出 3 条标题（每条带中文翻译 + 独立卖点），兼容全角/半角冒号及 . 、 - 等分隔符
 function parseTitles(text) {
   const out = [];
   let cur = null;
   const reTitle = /^\s*标题\s*([1-3])\s*[：:．.、\-]\s*(.+?)\s*$/;
+  const reTrans = /^\s*翻译\s*([1-3])\s*[：:．.、\-]\s*(.+?)\s*$/;
   const rePoint = /^\s*卖点\s*([1-3])\s*[：:．.、\-]\s*(.+?)\s*$/;
   for (const line of (text || "").split(/\r?\n/)) {
     const mt = line.match(reTitle);
+    const mr = line.match(reTrans);
     const mp = line.match(rePoint);
     if (mt) {
-      cur = { n: mt[1], title: mt[2].trim(), point: "" };
+      cur = { n: mt[1], title: mt[2].trim(), translation: "", point: "" };
       out.push(cur);
+    } else if (mr && cur) {
+      cur.translation = mr[2].trim();
     } else if (mp && cur) {
       cur.point = mp[2].trim();
     }

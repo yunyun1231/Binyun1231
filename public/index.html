@@ -92,6 +92,7 @@
     .tcard { padding: 12px 14px; border-radius: 14px; background: rgba(255,255,255,.9); border: 1px solid #d8e8fb; box-shadow: 0 4px 14px rgba(120,180,240,.18); }
     .tnum { display: inline-block; font-size: 12px; font-weight: 700; color: #fff; background: var(--blue-d); border-radius: 8px; padding: 2px 8px; margin-bottom: 6px; }
     .ttitle { font-size: 15px; font-weight: 700; line-height: 1.5; color: var(--ink); word-break: break-word; }
+    .tzh { margin: 4px 0 2px; font-size: 13px; color: var(--blue-d); font-weight: 600; }
     .tpoint { margin: 6px 0 10px; font-size: 13px; color: var(--ink-soft); }
     .tpoint b, .tpoint strong { color: var(--blue-d); }
     #toast { position: fixed; left: 50%; bottom: 36px; transform: translateX(-50%) translateY(20px); background: rgba(40,60,90,.92); color: #fff; padding: 9px 16px; border-radius: 20px; font-size: 13px; opacity: 0; pointer-events: none; transition: all .25s ease; z-index: 99; }
@@ -241,11 +242,12 @@
       titlesData = titles;
       if (!titles || !titles.length) { box.classList.add("hidden"); box.innerHTML = ""; return; }
       box.innerHTML =
-        `<div class="tc-hint">共生成 ${titles.length} 条标题，每条主打不同卖点：</div>` +
+        `<div class="tc-hint">共生成 ${titles.length} 条标题（英文 + 中文翻译），每条主打不同卖点：</div>` +
         titles.map((t, i) =>
           `<div class="tcard">
             <div class="tnum">方案 ${i + 1}</div>
             <div class="ttitle">${escapeHtml(t.title)}</div>
+            <div class="tzh">🇨🇳 ${escapeHtml(t.translation || "—")}</div>
             <div class="tpoint">✨ 卖点：${escapeHtml(t.point || "—")}</div>
             <button class="btn sm ghost" onclick="copyTitle(${i})">复制这条</button>
           </div>`
@@ -257,14 +259,15 @@
     function copyTitle(i) {
       const t = titlesData[i];
       if (!t) return;
-      navigator.clipboard?.writeText(t.title).then(
+      const text = [t.title, t.translation ? "中文：" + t.translation : "", t.point ? "卖点：" + t.point : ""].filter(Boolean).join("\n");
+      navigator.clipboard?.writeText(text).then(
         () => toast("已复制方案 " + (i + 1)),
-        () => alert(t.title)
+        () => alert(text)
       );
     }
 
     function copyAllTitles() {
-      const all = titlesData.map(t => t.title).join("\n");
+      const all = titlesData.map(t => [t.title, t.translation ? "中文：" + t.translation : "", t.point ? "卖点：" + t.point : ""].filter(Boolean).join("\n")).join("\n\n");
       if (!all) return;
       navigator.clipboard?.writeText(all).then(
         () => toast("已复制全部 " + titlesData.length + " 条标题"),
