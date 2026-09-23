@@ -93,7 +93,7 @@ function getKey(provided) {
   return (provided || process.env.DEEPSEEK_API_KEY || "").trim();
 }
 
-async function callDeepSeek(messages, apiKey, model = TEXT_MODEL, maxTokens = 2000, timeoutMs = 25000) {
+async function callDeepSeek(messages, apiKey, model = TEXT_MODEL, maxTokens = 2000, timeoutMs = 25000, jsonMode = false) {
   const key = getKey(apiKey);
   if (!key || key.startsWith("sk-your")) {
     return "ERROR: 请先配置有效的 DeepSeek API Key";
@@ -105,6 +105,7 @@ async function callDeepSeek(messages, apiKey, model = TEXT_MODEL, maxTokens = 20
     max_tokens: maxTokens,
     temperature: 0.7,
   };
+  if (jsonMode) payload.response_format = { type: "json_object" };
 
   try {
     const controller = new AbortController();
@@ -131,8 +132,11 @@ async function callDeepSeek(messages, apiKey, model = TEXT_MODEL, maxTokens = 20
     }
     const data = await resp.json();
     const m0 = data.choices?.[0]?.message || {};
-    const content = (m0.content || "").trim();
-    if (content) return content;
+    // 防御：去掉推理模型可能混入正文的自言自语
+    const cleaned = (m0.content || "")
+      .replace(/<think>[\s\S]*?<\/think>/g, "")
+      .trim();
+    if (cleaned) return cleaned;
     // 兼容推理模型：内容在 reasoning_content 里
     const reasoning = (m0.reasoning_content || "").trim();
     if (reasoning) return reasoning;
@@ -169,19 +173,18 @@ function buildTitleMessages(platform, language, fields) {
         `3. Write from the buyer's real search intent and clearly state what specific life problem this SKU solves;\n` +
         `4. Focus each title on one narrow usage scenario so new listings can gain exposure through long-tail traffic.`;
 
-  const titleLang = language === "cn" ? "【中文】标题" : "【英文】标题";
+  const titleLang = language === "cn" ? "中文" : "英文";
   const fmt =
-    "输出格式（必须恰好 3 组、共 6 行，逐行输出；不要输出任何解释、前言，不要输出「…」或任何占位符，必须写真实完整的内容）：\n" +
-    "标题1：这里写第一条的" + titleLang + "\n卖点1：这里写第一条主打的、与其他两条不同的核心卖点（中文一句话）\n" +
-    "标题2：这里写第二条的" + titleLang + "\n卖点2：这里写第二条的核心卖点（中文一句话）\n" +
-    "标题3：这里写第三条的" + titleLang + "\n卖点3：这里写第三条的核心卖点（中文一句话）";
+    "直接输出一个 JSON 对象（不要输出任何解释、前言、思考过程或 markdown 代码块标记），结构如下：\n" +
+    '{"titles":[{"title":"第一条' + titleLang + '标题","point":"该条主打的、与其他两条不同的核心卖点（中文一句话）"},{"title":"第二条' + titleLang + '标题","point":"第二条核心卖点（中文一句话）"},{"title":"第三条' + titleLang + '标题","point":"第三条核心卖点（中文一句话）"}]}\n' +
+    "要求：titles 数组必须恰好 3 个对象；title 必须是真实完整的" + titleLang + "标题（不是占位符、不是省略号）；point 用中文写。";
 
   const lead = existingTitle
-    ? `你是资深跨境电商运营。下面是一段已有标题，请保留其商品信息，为${pf}平台优化出 3 条${titleLang}，每条主打一个互不相同卖点。`
-    : `你是一个资深跨境电商运营。请基于商品信息，为${pf}平台生成 3 条${titleLang}，每条主打一个互不相同卖点。`;
+    ? `你是资深跨境电商运营。下面是一段已有标题，请保留其商品信息，为${pf}平台优化出 3 条${titleLang}标题，每条主打一个互不相同卖点。`
+    : `你是一个资深跨境电商运营。请基于商品信息，为${pf}平台生成 3 条${titleLang}标题，每条主打一个互不相同卖点。`;
 
   const diffNote =
-    "三条标题之间要有明显差异，不要雷同（例如角度1=容量大、角度2=省空间、角度3=材质耐用）。三条都必须输出、编号必须是1/2/3，缺一不可。卖点一律用中文写。";
+    "三条标题之间要有明显差异，不要雷同（例如角度1=容量大、角度2=省空间、角度3=材质耐用）。三条都必须输出，缺一不可。除了 JSON 本身，不要输出任何其他文字。";
 
   const sys = lead + "\n" + diffNote + "\n\n" + fmt + "\n\n" + longTailNote + "\n\n" + complianceNote;
 
@@ -223,18 +226,72 @@ function parseTitles(text) {
     .slice(0, 3);
 }
 
+// 从模型输出解析标题 JSON（失败则回退到行式解析）
+function extractTitles(text) {
+  const isJunk = (s) => !s || /^</.test(s.trim()) || /^[…‥\.。·•\-—_~\s]+$/.test(s.trim());
+  let s = (text || "").trim();
+  const m = s.match(/\{[\s\S]*\}/);
+  if (m) {
+    try {
+      const obj = JSON.parse(m[0]);
+      const arr = Array.isArray(obj.titles) ? obj.titles : [];
+      const out = arr
+        .map((t) => ({
+          title: String(t.title || "").trim(),
+          point: String(t.point || "").trim(),
+        }))
+        .filter((t) => !isJunk(t.title))
+        .slice(0, 3);
+      if (out.length) return out;
+    } catch { /* 回退到行式解析 */ }
+  }
+  return parseTitles(text).map((t) => ({ title: t.title, point: t.point }));
+}
+
+// 标题合规改写：JSON 进 JSON 出，保持结构不被破坏
+async function complianceFixTitles(titles, platformLabel, apiKey) {
+  if (!titles.length) return { titles, changes: [] };
+  const sys =
+    `你是跨境电商平台合规审核专家。下面是 ${platformLabel} 平台的 3 条商品标题（JSON）。` +
+    `请逐条检查：绝对化/夸大用语、医疗功效宣称、虚假促销、未经授权品牌词等，只改掉违规处，保留原意、原语言和条数。` +
+    `严格只返回 JSON，不要任何额外文字：` +
+    `{"titles":[{"title":"合规后标题","point":"原卖点"}],"changes":[{"word":"原违规词","reason":"规避原因"}]}`;
+  const messages = [
+    { role: "system", content: sys },
+    { role: "user", content: JSON.stringify({ titles: titles.map((t) => ({ title: t.title, point: t.point })) }) },
+  ];
+  const raw = await callDeepSeek(messages, apiKey, TEXT_MODEL, 1200, 15000, true);
+  if (raw.startsWith("ERROR")) return { titles, changes: [] };
+  try {
+    const m = raw.match(/\{[\s\S]*\}/);
+    const obj = JSON.parse(m ? m[0] : raw);
+    const arr = Array.isArray(obj.titles) ? obj.titles : [];
+    const fixed = arr
+      .map((t) => ({ title: String(t.title || "").trim(), point: String(t.point || "").trim() }))
+      .filter((t) => t.title)
+      .slice(0, 3);
+    if (!fixed.length) return { titles, changes: [] };
+    return {
+      titles: fixed,
+      changes: Array.isArray(obj.changes) ? obj.changes : [],
+    };
+  } catch {
+    return { titles, changes: [] };
+  }
+}
+
 async function generateTitle(fields, platform, language, apiKey, strict = false) {
   const [sysMsg, userMsg] = buildTitleMessages(platform, language, fields);
   const sys = strict
     ? sysMsg +
-      "\n\n【格式硬性要求】必须输出恰好 3 组，共 6 行：标题1/卖点1/标题2/卖点2/标题3/卖点3。" +
-      "必须写真实的标题和卖点内容，严禁输出 <full title> 等占位符，严禁只输出 1 组，严禁输出任何解释性文字。"
+      "\n\n【格式硬性要求】必须直接输出 JSON 对象，titles 数组恰好 3 个对象。" +
+      "必须写真实的标题和卖点内容，严禁输出 <full title> 或「…」等占位符，严禁只输出 1 个对象，严禁输出 JSON 以外的任何文字。"
     : sysMsg;
   const messages = [
     { role: "system", content: sys },
     { role: "user", content: userMsg },
   ];
-  return callDeepSeek(messages, apiKey, TEXT_MODEL, 1600);
+  return callDeepSeek(messages, apiKey, TEXT_MODEL, 1600, 25000, true);
 }
 
 async function analyzeImage(imageBase64, mime, apiKey) {
@@ -345,22 +402,36 @@ exports.handler = async function handler(event, context) {
     if (raw.startsWith("ERROR")) {
       return errResponse(raw);
     }
-    // 保险：如果模型没按格式输出（解析不到 2 条以上），带更严格指令重试一次
-    if (parseTitles(raw).length < 2) {
+    // 保险：如果模型没按 JSON 格式输出（解析不到 2 条以上），带更严格指令重试一次
+    let titles = extractTitles(raw);
+    if (titles.length < 2) {
       const retry = await generateTitle(fields, platform, language, apiKey, true);
-      if (!retry.startsWith("ERROR") && parseTitles(retry).length >= parseTitles(raw).length) {
-        raw = retry;
+      if (!retry.startsWith("ERROR")) {
+        const retryTitles = extractTitles(retry);
+        if (retryTitles.length > titles.length) {
+          raw = retry;
+          titles = retryTitles;
+        }
       }
     }
+    if (!titles.length) {
+      return errResponse("AI 没有返回有效标题，请重试一次。原始返回：" + raw.slice(0, 150));
+    }
+    // 合规：静态扫描 + AI 逐条改写（JSON 进 JSON 出，不破坏结构）
     const pfLabel = platform === "amazon" ? "Amazon" : "Temu";
-    const review = await complianceReview(raw, pfLabel, apiKey);
-    const staticHits = scanViolations(review.clean, platform);
-    const titles = parseTitles(review.clean);
+    const joined = titles.map((t) => t.title).join("\n");
+    let staticHits = scanViolations(joined, platform);
+    const fix = await complianceFixTitles(titles, pfLabel, apiKey);
+    if (fix.titles.length) titles = fix.titles;
+    staticHits = scanViolations(titles.map((t) => t.title).join("\n"), platform);
+    const result = titles
+      .map((t, i) => `标题${i + 1}：${t.title}\n卖点${i + 1}：${t.point || "—"}`)
+      .join("\n\n");
     return okResponse({
-      result: review.clean,
+      result,
       raw_result: raw,
       titles,
-      avoided: review.changes,
+      avoided: fix.changes,
       static_hits: staticHits,
     });
   }
