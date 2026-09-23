@@ -175,9 +175,10 @@ function buildTitleMessages(platform, language, fields) {
 
   const titleLang = language === "cn" ? "中文" : "英文";
   const fmt =
-    "直接输出一个 JSON 对象（不要输出任何解释、前言、思考过程或 markdown 代码块标记），结构如下：\n" +
-    '{"titles":[{"title":"第一条' + titleLang + '标题","point":"该条主打的、与其他两条不同的核心卖点（中文一句话）"},{"title":"第二条' + titleLang + '标题","point":"第二条核心卖点（中文一句话）"},{"title":"第三条' + titleLang + '标题","point":"第三条核心卖点（中文一句话）"}]}\n' +
-    "要求：titles 数组必须恰好 3 个对象；title 必须是真实完整的" + titleLang + "标题（不是占位符、不是省略号）；point 用中文写。";
+    "直接输出一个 JSON 对象（不要输出任何解释、前言、思考过程或 markdown 代码块标记）。对象必须包含名为 titles 的数组，数组里恰好 3 个对象，每个对象有两个字段：\n" +
+    "- title：字符串，根据上面的商品信息现写的一条真实完整的" + titleLang + "标题；严禁照抄任何示例文字、严禁占位符、严禁省略号\n" +
+    "- point：字符串，该条标题主打的、与其他两条不同的核心卖点，用中文写一句话\n" +
+    "三条 title 的切入角度必须互不相同（例如角度1=材质安全、角度2=场景适用、角度3=设计细节）。除 JSON 本身外不要输出任何其他文字。";
 
   const lead = existingTitle
     ? `你是资深跨境电商运营。下面是一段已有标题，请保留其商品信息，为${pf}平台优化出 3 条${titleLang}标题，每条主打一个互不相同卖点。`
@@ -203,8 +204,8 @@ function parseTitles(text) {
   const reTitle = /^\s*标题\s*([1-9])\s*[：:．.、\-]\s*(.+?)\s*$/;
   const reTrans = /^\s*翻译\s*([1-9])\s*[：:．.、\-]\s*(.+?)\s*$/;
   const rePoint = /^\s*卖点\s*([1-9])\s*[：:．.、\-]\s*(.+?)\s*$/;
-  // 无效内容：占位符/省略号/空白装饰符
-  const isJunk = (s) => !s || /^</.test(s) || /^[…‥\.。·•\-—_~]+$/.test(s);
+  // 无效内容：占位符/省略号/空白装饰符/模板照抄
+  const isJunk = (s) => !s || /^</.test(s) || /^[…‥\.。·•\-—_~]+$/.test(s) || TEMPLATE_ECHO_PAT.test(s);
   for (const line of (text || "").split(/\r?\n/)) {
     const mt = line.match(reTitle);
     const mr = line.match(reTrans);
@@ -226,9 +227,13 @@ function parseTitles(text) {
     .slice(0, 3);
 }
 
+// 模板照抄/占位符检测：模型把格式示例词原样抄出来时视为无效
+const TEMPLATE_ECHO_PAT = /合规后标题|原卖点|原违规词|规避原因|这里写|第[一二三]条.+标题/;
+
 // 从模型输出解析标题 JSON（失败则回退到行式解析）
 function extractTitles(text) {
-  const isJunk = (s) => !s || /^</.test(s.trim()) || /^[…‥\.。·•\-—_~\s]+$/.test(s.trim());
+  const isJunk = (s) =>
+    !s || TEMPLATE_ECHO_PAT.test(s) || /^</.test(s.trim()) || /^[…‥\.。·•\-—_~\s]+$/.test(s.trim());
   let s = (text || "").trim();
   const m = s.match(/\{[\s\S]*\}/);
   if (m) {
@@ -252,10 +257,9 @@ function extractTitles(text) {
 async function complianceFixTitles(titles, platformLabel, apiKey) {
   if (!titles.length) return { titles, changes: [] };
   const sys =
-    `你是跨境电商平台合规审核专家。下面是 ${platformLabel} 平台的 3 条商品标题（JSON）。` +
-    `请逐条检查：绝对化/夸大用语、医疗功效宣称、虚假促销、未经授权品牌词等，只改掉违规处，保留原意、原语言和条数。` +
-    `严格只返回 JSON，不要任何额外文字：` +
-    `{"titles":[{"title":"合规后标题","point":"原卖点"}],"changes":[{"word":"原违规词","reason":"规避原因"}]}`;
+    `你是跨境电商平台合规审核专家。用户消息是 ${platformLabel} 平台的商品标题（JSON，titles 数组，每项有 title 和 point 字段）。` +
+    `请逐条检查 title 是否有违规表述（绝对化/夸大用语、医疗功效宣称、虚假促销、未经授权品牌词等），只修改违规处，保留原意、原语言和条数，point 保持原文。` +
+    `严格只返回一个 JSON 对象，不要任何解释、前言或 markdown 标记：对象包含 titles 数组（与输入一一对应、字段同名、内容为合规后的真实标题，必须根据输入现写，严禁照抄任何示例）和 changes 数组（每项含 word、reason 两个字段，word 填你实际改掉的违规词；没有违规则 changes 为空数组）。`;
   const messages = [
     { role: "system", content: sys },
     { role: "user", content: JSON.stringify({ titles: titles.map((t) => ({ title: t.title, point: t.point })) }) },
@@ -266,15 +270,19 @@ async function complianceFixTitles(titles, platformLabel, apiKey) {
     const m = raw.match(/\{[\s\S]*\}/);
     const obj = JSON.parse(m ? m[0] : raw);
     const arr = Array.isArray(obj.titles) ? obj.titles : [];
+    // 校验：防模板照抄（返回「合规后标题/原卖点」这类示例词）、防条数不符；任一发生就弃用改写、保留原标题
+    const badTitle = (s) =>
+      !s || TEMPLATE_ECHO_PAT.test(s) || /^</.test(s) || /^[…‥\.。·•\-—_~\s]+$/.test(s);
     const fixed = arr
       .map((t) => ({ title: String(t.title || "").trim(), point: String(t.point || "").trim() }))
-      .filter((t) => t.title)
-      .slice(0, 3);
-    if (!fixed.length) return { titles, changes: [] };
-    return {
-      titles: fixed,
-      changes: Array.isArray(obj.changes) ? obj.changes : [],
-    };
+      .filter((t) => !badTitle(t.title));
+    if (fixed.length !== titles.length) {
+      return { titles, changes: [] };
+    }
+    const changes = (Array.isArray(obj.changes) ? obj.changes : []).filter(
+      (c) => c && c.word && !TEMPLATE_ECHO_PAT.test(String(c.word)) && !TEMPLATE_ECHO_PAT.test(String(c.reason || ""))
+    );
+    return { titles: fixed, changes };
   } catch {
     return { titles, changes: [] };
   }
