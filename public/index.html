@@ -87,6 +87,15 @@
     .result { width: 100%; border: 1px solid #d8e8fb; border-radius: 11px; padding: 10px 12px; font-size: 13px; background: rgba(244,250,255,.85); margin-top: 10px; resize: vertical; min-height: 90px; }
     .panel { margin-top: 12px; padding: 12px; border-radius: 14px; background: #fff7ec; border: 1px solid #ffe2b8; font-size: 13px; }
     .panel .sec { font-weight: 700; margin-bottom: 6px; }
+    .title-cards { margin-top: 10px; display: grid; gap: 10px; }
+    .tc-hint { font-size: 12px; color: var(--blue-d); font-weight: 600; }
+    .tcard { padding: 12px 14px; border-radius: 14px; background: rgba(255,255,255,.9); border: 1px solid #d8e8fb; box-shadow: 0 4px 14px rgba(120,180,240,.18); }
+    .tnum { display: inline-block; font-size: 12px; font-weight: 700; color: #fff; background: var(--blue-d); border-radius: 8px; padding: 2px 8px; margin-bottom: 6px; }
+    .ttitle { font-size: 15px; font-weight: 700; line-height: 1.5; color: var(--ink); word-break: break-word; }
+    .tpoint { margin: 6px 0 10px; font-size: 13px; color: var(--ink-soft); }
+    .tpoint b, .tpoint strong { color: var(--blue-d); }
+    #toast { position: fixed; left: 50%; bottom: 36px; transform: translateX(-50%) translateY(20px); background: rgba(40,60,90,.92); color: #fff; padding: 9px 16px; border-radius: 20px; font-size: 13px; opacity: 0; pointer-events: none; transition: all .25s ease; z-index: 99; }
+    #toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
     .out-box { margin-top: 10px; padding: 12px; border-radius: 14px; background: rgba(127,200,255,.14); font-size: 13px; }
     .out-box .sec { font-weight: 700; color: var(--blue-d); margin-bottom: 4px; }
     footer { text-align: center; font-size: 12px; color: var(--ink-soft); margin-top: 10px; }
@@ -149,6 +158,7 @@
         <button id="genBtn" class="btn" onclick="genTitle()">✨ 生成标题</button>
         <div id="titleLoading" class="hidden hint"><span class="spinner"></span>生成中…</div>
         <textarea id="titleResult" class="result" readonly placeholder="结果会显示在这里"></textarea>
+        <div id="titleCards" class="title-cards hidden"></div>
         <div id="titleCompliance" class="panel hidden"></div>
       </section>
 
@@ -221,7 +231,55 @@
       b.disabled = false;
       if (!r.ok) { alert(friendlyErr(r.msg)); return; }
       $("titleResult").value = r.result;
+      renderTitles(r.titles || []);
       renderCompliance("titleCompliance", r);
+    }
+
+    let titlesData = [];
+    function renderTitles(titles) {
+      const box = $("titleCards");
+      titlesData = titles;
+      if (!titles || !titles.length) { box.classList.add("hidden"); box.innerHTML = ""; return; }
+      box.innerHTML =
+        `<div class="tc-hint">共生成 ${titles.length} 条标题，每条主打不同卖点：</div>` +
+        titles.map((t, i) =>
+          `<div class="tcard">
+            <div class="tnum">方案 ${i + 1}</div>
+            <div class="ttitle">${escapeHtml(t.title)}</div>
+            <div class="tpoint">✨ 卖点：${escapeHtml(t.point || "—")}</div>
+            <button class="btn sm ghost" onclick="copyTitle(${i})">复制这条</button>
+          </div>`
+        ).join("") +
+        `<button class="btn sm" onclick="copyAllTitles()">📋 一键复制全部标题</button>`;
+      box.classList.remove("hidden");
+    }
+
+    function copyTitle(i) {
+      const t = titlesData[i];
+      if (!t) return;
+      navigator.clipboard?.writeText(t.title).then(
+        () => toast("已复制方案 " + (i + 1)),
+        () => alert(t.title)
+      );
+    }
+
+    function copyAllTitles() {
+      const all = titlesData.map(t => t.title).join("\n");
+      if (!all) return;
+      navigator.clipboard?.writeText(all).then(
+        () => toast("已复制全部 " + titlesData.length + " 条标题"),
+        () => alert(all)
+      );
+    }
+
+    let toastTimer = null;
+    function toast(msg) {
+      let el = $("toast");
+      if (!el) { el = document.createElement("div"); el.id = "toast"; document.body.appendChild(el); }
+      el.textContent = msg;
+      el.classList.add("show");
+      clearTimeout(toastTimer);
+      toastTimer = setTimeout(() => el.classList.remove("show"), 1600);
     }
 
     async function analyzeImage() {

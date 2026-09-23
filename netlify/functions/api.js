@@ -72,7 +72,7 @@ async function complianceReview(text, platformLabel, apiKey) {
     { role: "system", content: sys },
     { role: "user", content: text },
   ];
-  const raw = await callDeepSeek(messages, apiKey, TEXT_MODEL, 800, 15000);
+  const raw = await callDeepSeek(messages, apiKey, TEXT_MODEL, 1200, 15000);
   if (raw.startsWith("ERROR")) return { clean: text, changes: [], error: raw };
   // 解析 JSON（兼容 ```json 包裹）
   let jsonStr = raw.trim();
@@ -169,22 +169,23 @@ function buildTitleMessages(platform, language, fields) {
         `3. Write from the buyer's real search intent and clearly state what specific life problem this SKU solves;\n` +
         `4. Focus each title on one narrow usage scenario so new listings can gain exposure through long-tail traffic.`;
 
-  let sys;
-  if (language === "cn") {
-    if (existingTitle) {
-      sys = `你是一个资深跨境电商运营。下面是一段已有标题，请基于商品信息对其进行优化，使其更符合${pf}平台的搜索曝光规则，突出卖点与关键词。只输出优化后的标题，不要解释。`;
-    } else {
-      sys = `你是一个资深跨境电商运营。请基于商品信息，为${pf}平台生成5条高质量中文商品标题，每行一条，突出关键词与卖点，符合平台搜索习惯。`;
-    }
-  } else {
-    if (existingTitle) {
-      sys = `You are a senior cross-border e-commerce operator. Optimize the existing title below for the ${pf} platform's search algorithm, emphasizing keywords and selling points. Output only the optimized title, no explanation.`;
-    } else {
-      sys = `You are a senior cross-border e-commerce operator. Based on the product info below, generate 5 high-quality English product titles for the ${pf} platform, one per line, emphasizing keywords and selling points, following platform search habits.`;
-    }
-  }
+  const fmt = language === "cn"
+    ? "严格按以下格式逐行输出，不要任何额外解释：\n标题1：<完整标题>\n卖点1：<该标题主打的、区别于另外两条的核心卖点，一句话>\n标题2：<完整标题>\n卖点2：<...>\n标题3：<完整标题>\n卖点3：<...>"
+    : "Output strictly in this format, one line each, no extra explanation:\n标题1：<full title>\n卖点1：<the key selling point of this title, one sentence, distinct from the other two>\n标题2：<full title>\n卖点2：<...>\n标题3：<full title>\n卖点3：<...>";
 
-  sys += "\n\n" + longTailNote + "\n\n" + complianceNote;
+  const lead = existingTitle
+    ? (language === "cn"
+        ? `你是资深跨境电商运营。下面是一段已有标题，请保留其商品信息，为${pf}平台优化出 3 条标题，每条主打一个互不相同卖点。`
+        : `You are a senior cross-border e-commerce operator. Below is an existing title. Keep its product info and produce 3 optimized titles for the ${pf} platform, each emphasizing a distinct selling point.`)
+    : (language === "cn"
+        ? `你是一个资深跨境电商运营。请基于商品信息，为${pf}平台生成 3 条标题，每条主打一个互不相同卖点。`
+        : `You are a senior cross-border e-commerce operator. Based on the product info, generate 3 titles for the ${pf} platform, each emphasizing a distinct selling point.`);
+
+  const diffNote = language === "cn"
+    ? "三条标题之间要有明显差异，不要雷同（例如角度1=容量大、角度2=省空间、角度3=材质耐用）。"
+    : "The three titles must differ clearly (e.g. angle1=large capacity, angle2=space-saving, angle3=durable material).";
+
+  const sys = lead + "\n" + diffNote + "\n\n" + fmt + "\n\n" + longTailNote + "\n\n" + complianceNote;
 
   const user = `商品名称: ${product}\n品类: ${category}\n核心关键词: ${keywords}\n目标人群: ${audience}\n核心卖点/功能: ${features}\n`;
   if (existingTitle) {
@@ -193,13 +194,32 @@ function buildTitleMessages(platform, language, fields) {
   return [sys, user];
 }
 
+// 从模型输出里解析出 3 条标题（每条带独立卖点）
+function parseTitles(text) {
+  const out = [];
+  let cur = null;
+  const reTitle = /^\s*标题\s*([1-3])[：:]\s*(.+?)\s*$/;
+  const rePoint = /^\s*卖点\s*([1-3])[：:]\s*(.+?)\s*$/;
+  for (const line of (text || "").split(/\r?\n/)) {
+    const mt = line.match(reTitle);
+    const mp = line.match(rePoint);
+    if (mt) {
+      cur = { n: mt[1], title: mt[2].trim(), point: "" };
+      out.push(cur);
+    } else if (mp && cur) {
+      cur.point = mp[2].trim();
+    }
+  }
+  return out.filter((t) => t.title);
+}
+
 async function generateTitle(fields, platform, language, apiKey) {
   const [sysMsg, userMsg] = buildTitleMessages(platform, language, fields);
   const messages = [
     { role: "system", content: sysMsg },
     { role: "user", content: userMsg },
   ];
-  return callDeepSeek(messages, apiKey, TEXT_MODEL, 1200);
+  return callDeepSeek(messages, apiKey, TEXT_MODEL, 1600);
 }
 
 async function analyzeImage(imageBase64, mime, apiKey) {
@@ -313,9 +333,11 @@ exports.handler = async function handler(event, context) {
     const pfLabel = platform === "amazon" ? "Amazon" : "Temu";
     const review = await complianceReview(raw, pfLabel, apiKey);
     const staticHits = scanViolations(review.clean, platform);
+    const titles = parseTitles(review.clean);
     return okResponse({
       result: review.clean,
       raw_result: raw,
+      titles,
       avoided: review.changes,
       static_hits: staticHits,
     });
